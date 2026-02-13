@@ -7,8 +7,8 @@ import BuildingFormPage from './pages/BuildingFormPage';
 import BuildingDetailPage from './pages/BuildingDetailPage';
 import CompaniesPage from './pages/CompaniesPage';
 import PersonsPage from './pages/PersonsPage';
-import RequestsPage from './pages/RequestsPage';
-import OffersPage from './pages/OffersPage';
+import DealsPage from './pages/DealsPage';
+import DealDetailPage from './pages/DealDetailPage';
 import ActivitiesPage from './pages/ActivitiesPage';
 import UsersPage from './pages/UsersPage';
 
@@ -24,8 +24,8 @@ function App() {
         <Route path="proprietati/:id/edit" element={<BuildingFormPage />} />
         <Route path="companii" element={<CompaniesPage />} />
         <Route path="persoane" element={<PersonsPage />} />
-        <Route path="cereri" element={<RequestsPage />} />
-        <Route path="oferte" element={<OffersPage />} />
+        <Route path="deals" element={<DealsPage />} />
+        <Route path="deals/:id" element={<DealDetailPage />} />
         <Route path="activitati" element={<ActivitiesPage />} />
         <Route path="utilizatori" element={<UsersPage />} />
       </Route>

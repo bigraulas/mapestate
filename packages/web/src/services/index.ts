@@ -7,6 +7,7 @@ export { personsService } from './persons.service';
 export { labelsService } from './labels.service';
 export { requestsService } from './requests.service';
 export { offersService } from './offers.service';
+export { dealsService } from './deals.service';
 export { activitiesService } from './activities.service';
 export { dashboardService } from './dashboard.service';
 export { usersService } from './users.service';

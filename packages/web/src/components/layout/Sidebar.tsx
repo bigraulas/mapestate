@@ -6,7 +6,7 @@ import {
   Building,
   Users,
   FileText,
-  FileCheck,
+  Handshake,
   Calendar,
   Settings,
   ChevronDown,
@@ -45,14 +45,9 @@ const navigation: NavItem[] = [
     ],
   },
   {
-    label: 'Cereri',
-    path: '/cereri',
-    icon: FileText,
-  },
-  {
-    label: 'Oferte',
-    path: '/oferte',
-    icon: FileCheck,
+    label: 'Deals',
+    path: '/deals',
+    icon: Handshake,
   },
   {
     label: 'Activitati',
