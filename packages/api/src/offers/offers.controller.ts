@@ -8,6 +8,7 @@ import {
   Param,
   Query,
   Req,
+  Res,
   ParseIntPipe,
   UseGuards,
   DefaultValuePipe,
@@ -17,11 +18,31 @@ import { OffersService } from './offers.service';
 import { CreateOfferDto } from './dto/create-offer.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { SendOffersDto } from './dto/send-offers.dto';
 
 @Controller('offers')
 @UseGuards(AuthGuard('jwt'))
 export class OffersController {
   constructor(private readonly offersService: OffersService) {}
+
+  @Post('send')
+  sendOffers(@Body() dto: SendOffersDto, @Req() req: any) {
+    return this.offersService.sendOffers(dto, req.user.id);
+  }
+
+  @Get('deal/:dealId/pdf')
+  async downloadPdf(
+    @Param('dealId', ParseIntPipe) dealId: number,
+    @Res() res: any,
+  ) {
+    const pdfBuffer = await this.offersService.generatePdf(dealId);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'attachment; filename="oferta-' + dealId + '.pdf"',
+      'Content-Length': pdfBuffer.length,
+    });
+    res.end(pdfBuffer);
+  }
 
   @Get()
   findAll(

@@ -17,6 +17,7 @@ import { RequestsService } from './requests.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
+import { CreateColdSalesDto } from './dto/create-cold-sales.dto';
 
 @Controller('requests')
 @UseGuards(AuthGuard('jwt'))
@@ -55,9 +56,19 @@ export class RequestsController {
     return this.requestsService.getClosedStats(req.user.id);
   }
 
+  @Get(':id/matches')
+  findMatches(@Param('id', ParseIntPipe) id: number) {
+    return this.requestsService.findMatches(id);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.requestsService.findOne(id);
+  }
+
+  @Post('cold-sales')
+  createColdSales(@Body() dto: CreateColdSalesDto, @Req() req: any) {
+    return this.requestsService.createColdSales(dto, req.user.id);
   }
 
   @Post()

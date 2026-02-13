@@ -7,9 +7,13 @@ import {
   IsArray,
   IsDateString,
 } from 'class-validator';
-import { RequestType } from '@prisma/client';
+import { RequestType, DealType } from '@prisma/client';
 
 export class CreateRequestDto {
+  @IsEnum(DealType)
+  @IsOptional()
+  dealType?: DealType;
+
   @IsString()
   @IsNotEmpty()
   name!: string;

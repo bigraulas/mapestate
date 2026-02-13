@@ -8,6 +8,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
+import { CreateColdSalesDto } from './dto/create-cold-sales.dto';
 
 const TERMINAL_STATUSES: RequestStatus[] = [
   RequestStatus.WON,
@@ -354,6 +355,152 @@ export class RequestsService {
     await this.recalculateDealCounts(request.companyId, request.personId);
 
     return request;
+  }
+
+  async findMatches(id: number) {
+    const request = await this.prisma.propertyRequest.findUnique({
+      where: { id },
+      include: { locations: true },
+    });
+
+    if (!request) {
+      throw new NotFoundException(`Request with ID ${id} not found`);
+    }
+
+    // Load buildings filtered by transactionType matching requestType
+    const buildingWhere: Record<string, unknown> = {};
+    if (request.requestType) {
+      buildingWhere.transactionType = request.requestType;
+    }
+
+    const buildings = await this.prisma.building.findMany({
+      where: buildingWhere,
+      include: { location: true },
+    });
+
+    const requestLocationIds = request.locations.map((l) => l.id);
+    const requestLocationCounties = request.locations.map((l) => l.county);
+
+    const results = buildings.map((building) => {
+      // SQM score (35% weight)
+      let sqmScore: number;
+      if (request.numberOfSqm && building.availableSqm) {
+        const diff = Math.abs(building.availableSqm - request.numberOfSqm);
+        const tolerance = request.numberOfSqm * 0.3;
+        sqmScore =
+          diff <= tolerance ? Math.round((1 - diff / tolerance) * 100) : 0;
+      } else {
+        sqmScore = 50;
+      }
+
+      // Location score (40% weight)
+      let locationScore: number;
+      if (requestLocationIds.length === 0) {
+        locationScore = 50;
+      } else if (
+        building.locationId &&
+        requestLocationIds.includes(building.locationId)
+      ) {
+        locationScore = 100;
+      } else if (
+        building.location &&
+        requestLocationCounties.includes(building.location.county)
+      ) {
+        locationScore = 50;
+      } else {
+        locationScore = 0;
+      }
+
+      // Availability score (25% weight)
+      let availabilityScore = 50;
+      if (request.startDate && building.availableFrom) {
+        const diffMs =
+          building.availableFrom.getTime() - request.startDate.getTime();
+        const diffMonths = diffMs / (1000 * 60 * 60 * 24 * 30);
+        if (diffMonths <= 0) {
+          availabilityScore = 100;
+        } else if (diffMonths <= 3) {
+          availabilityScore = 50;
+        } else {
+          availabilityScore = 0;
+        }
+      }
+
+      const score = Math.round(
+        sqmScore * 0.35 + locationScore * 0.4 + availabilityScore * 0.25,
+      );
+
+      return {
+        building: {
+          id: building.id,
+          name: building.name,
+          address: building.address,
+          availableSqm: building.availableSqm,
+          transactionType: building.transactionType,
+          serviceCharge: building.serviceCharge,
+          availableFrom: building.availableFrom,
+          location: building.location,
+          latitude: building.latitude,
+          longitude: building.longitude,
+        },
+        score,
+        breakdown: {
+          sqm: sqmScore,
+          location: locationScore,
+          availability: availabilityScore,
+        },
+      };
+    });
+
+    return results
+      .filter((r) => r.score >= 40)
+      .sort((a, b) => b.score - a.score);
+  }
+
+  async createColdSales(dto: CreateColdSalesDto, userId: number) {
+    const buildings = await this.prisma.building.findMany({
+      where: { id: { in: dto.buildingIds } },
+      include: { location: true },
+    });
+
+    const persons = await this.prisma.person.findMany({
+      where: { id: { in: dto.recipientPersonIds } },
+      include: { company: true },
+    });
+
+    if (buildings.length === 0) {
+      throw new BadRequestException('No valid buildings found for the given IDs');
+    }
+
+    if (persons.length === 0) {
+      throw new BadRequestException('No valid persons found for the given IDs');
+    }
+
+    const createdDeals = [];
+
+    for (const person of persons) {
+      const deal = await this.prisma.propertyRequest.create({
+        data: {
+          name: `Cold Sales - ${person.company?.name || person.name}`,
+          dealType: 'COLD_SALES',
+          userId,
+          companyId: person.companyId,
+          personId: person.id,
+          status: 'OFFERING',
+          lastStatusChange: new Date(),
+        },
+        include: {
+          company: true,
+          person: true,
+          locations: true,
+        },
+      });
+
+      await this.recalculateDealCounts(deal.companyId, deal.personId);
+      createdDeals.push(deal);
+    }
+
+    return { deals: createdDeals, count: createdDeals.length };
   }
 
   /**
