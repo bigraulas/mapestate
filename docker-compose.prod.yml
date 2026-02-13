@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dunwell-db-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-dunwell}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dunwell_pass}
+      POSTGRES_DB: ${DB_NAME:-dunwell_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - dunwell
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-dunwell}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    container_name: dunwell-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-dunwell}:${DB_PASSWORD:-dunwell_pass}@postgres:5432/${DB_NAME:-dunwell_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-1d}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-7d}
+      API_PORT: 3000
+      API_PREFIX: api
+      NODE_ENV: production
+    volumes:
+      - uploads:/app/packages/api/uploads
+    networks:
+      - dunwell
+
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+    container_name: dunwell-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${APP_PORT:-80}:80"
+    networks:
+      - dunwell
+
+  # Run migrations and seed on first deploy
+  migrate:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    container_name: dunwell-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-dunwell}:${DB_PASSWORD:-dunwell_pass}@postgres:5432/${DB_NAME:-dunwell_db}?schema=public
+    command: >
+      sh -c "cd /app/packages/api && npx --no-install prisma migrate deploy && npx --no-install ts-node --compiler-options '{\"module\":\"commonjs\"}' prisma/seed.ts"
+    networks:
+      - dunwell
+    restart: "no"
+
+volumes:
+  postgres_data:
+  uploads:
+
+networks:
+  dunwell:
+    driver: bridge

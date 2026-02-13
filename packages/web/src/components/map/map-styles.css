@@ -1,0 +1,423 @@
+/* ============================================
+   Dunwell Mapbox Custom Styles
+   Premium 3D interactive map styling
+   ============================================ */
+
+/* ---- Custom Markers ---- */
+.mapbox-custom-marker {
+  cursor: pointer;
+  position: relative;
+}
+
+.marker-pin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  padding: 6px 10px 6px 8px;
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: bottom center;
+  position: relative;
+  z-index: 2;
+}
+
+.marker-pin:hover {
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.marker-pin::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid white;
+}
+
+.marker-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.marker-rent .marker-icon {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.marker-sale .marker-icon {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.marker-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+/* Selected state */
+.marker-selected {
+  background: #1e293b;
+  box-shadow: 0 4px 20px rgba(30, 41, 59, 0.4), 0 0 0 2px #3b82f6;
+}
+
+.marker-selected::after {
+  border-top-color: #1e293b;
+}
+
+.marker-selected .marker-label {
+  color: white;
+}
+
+/* Pulse animation */
+.marker-pulse {
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  z-index: 1;
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+.pulse-rent {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.pulse-sale {
+  background: rgba(16, 185, 129, 0.3);
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: translateX(-50%) scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(-50%) scale(4);
+    opacity: 0;
+  }
+}
+
+/* ---- Popup Styles ---- */
+.mapbox-popup-custom .mapboxgl-popup-content {
+  border-radius: 16px;
+  padding: 0;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  backdrop-filter: blur(8px);
+}
+
+.mapbox-popup-custom .mapboxgl-popup-tip {
+  border-top-color: white;
+}
+
+.mapbox-popup-custom .mapboxgl-popup-close-button {
+  font-size: 18px;
+  color: #94a3b8;
+  padding: 8px 10px;
+  right: 4px;
+  top: 4px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.mapbox-popup-custom .mapboxgl-popup-close-button:hover {
+  color: #1e293b;
+  background: #f1f5f9;
+}
+
+.map-popup {
+  padding: 16px;
+  min-width: 220px;
+}
+
+.popup-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.popup-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.popup-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.badge-rent {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.badge-sale {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.popup-location {
+  font-size: 13px;
+  color: #475569;
+  margin: 0 0 2px;
+  font-weight: 500;
+}
+
+.popup-address {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0 0 12px;
+}
+
+.popup-stats {
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+
+.popup-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.popup-action {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.popup-action:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* ---- Discovered Property Markers (OSM) ---- */
+.mapbox-discovered-marker {
+  cursor: pointer;
+  position: relative;
+}
+
+.disc-marker-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1;
+}
+
+.disc-marker-pin:hover {
+  transform: scale(1.2) translateY(-2px);
+}
+
+.disc-marker-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 2px white;
+  transition: box-shadow 0.2s ease;
+}
+
+.disc-marker-pin:hover .disc-marker-icon {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 0 0 3px white;
+}
+
+/* Own property markers (CRM) - extra prominent */
+.marker-own {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15), 0 0 0 2px #3b82f6;
+}
+
+/* Popup source label */
+.popup-source {
+  font-size: 10px;
+  color: #94a3b8;
+  text-align: center;
+  margin: 8px 0 0;
+  font-style: italic;
+}
+
+/* Import button variant */
+.popup-action-import {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+}
+
+.popup-action-import:hover {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+}
+
+/* ---- Picker Marker (for forms) ---- */
+.picker-marker {
+  cursor: grab;
+}
+
+.picker-marker:active {
+  cursor: grabbing;
+}
+
+.picker-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #3b82f6, #7c3aed);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
+  animation: picker-bounce 0.5s ease-out;
+}
+
+.picker-pin svg {
+  transform: rotate(45deg);
+}
+
+@keyframes picker-bounce {
+  0% {
+    transform: rotate(-45deg) translateY(-20px);
+    opacity: 0;
+  }
+  60% {
+    transform: rotate(-45deg) translateY(5px);
+  }
+  100% {
+    transform: rotate(-45deg) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ---- Map Control Buttons ---- */
+.map-control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: white;
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  transition: all 0.2s ease;
+}
+
+.map-control-btn:hover {
+  background: #f8fafc;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.map-control-btn:active {
+  transform: scale(0.95);
+}
+
+/* ---- Subtle bounce animation ---- */
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-4px);
+  }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s ease-in-out infinite;
+}
+
+/* ---- Mapbox GL overrides ---- */
+.mapboxgl-ctrl-group {
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+}
+
+.mapboxgl-ctrl-group button {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+.mapboxgl-ctrl-group button + button {
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+.mapboxgl-ctrl-attrib {
+  border-radius: 8px !important;
+  font-size: 10px !important;
+}
+
+/* ---- Slide-in animation for panels ---- */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

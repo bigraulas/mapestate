@@ -1,0 +1,11 @@
+export { PropertiesModule } from './properties.module';
+export { BuildingsController } from './buildings.controller';
+export { UnitsController } from './units.controller';
+export { LocationsController } from './locations.controller';
+export { BuildingsService } from './buildings.service';
+export { UnitsService } from './units.service';
+export { LocationsService } from './locations.service';
+export { CreateBuildingDto } from './dto/create-building.dto';
+export { UpdateBuildingDto } from './dto/update-building.dto';
+export { CreateUnitDto } from './dto/create-unit.dto';
+export { UpdateUnitDto } from './dto/update-unit.dto';

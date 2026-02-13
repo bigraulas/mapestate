@@ -1,0 +1,13 @@
+export { ContactsModule } from './contacts.module';
+export { CompaniesController } from './companies.controller';
+export { PersonsController } from './persons.controller';
+export { LabelsController } from './labels.controller';
+export { CompaniesService } from './companies.service';
+export { PersonsService } from './persons.service';
+export { LabelsService } from './labels.service';
+export { CreateCompanyDto } from './dto/create-company.dto';
+export { UpdateCompanyDto } from './dto/update-company.dto';
+export { CreatePersonDto } from './dto/create-person.dto';
+export { UpdatePersonDto } from './dto/update-person.dto';
+export { CreateLabelDto } from './dto/create-label.dto';
+export { UpdateLabelDto } from './dto/update-label.dto';

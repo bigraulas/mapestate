@@ -1,0 +1,32 @@
+{
+  "name": "dunwell-mvp",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:api": "pnpm --filter @dunwell/api dev",
+    "dev:web": "pnpm --filter @dunwell/web dev",
+    "build": "pnpm -r build",
+    "build:api": "pnpm --filter @dunwell/api build",
+    "build:web": "pnpm --filter @dunwell/web build",
+    "lint": "pnpm -r lint",
+    "db:migrate": "pnpm --filter @dunwell/api prisma:migrate",
+    "db:seed": "pnpm --filter @dunwell/api prisma:seed",
+    "db:studio": "pnpm --filter @dunwell/api prisma:studio",
+    "docker:up": "docker compose -f docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker-compose.yml down",
+    "docker:prod": "docker compose -f docker-compose.prod.yml up -d --build",
+    "docker:prod:down": "docker compose -f docker-compose.prod.yml down"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma"
+    ]
+  }
+}

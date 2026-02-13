@@ -1,0 +1,414 @@
+// Dunwell CRM - Industrial Real Estate (Romania)
+// Prisma Schema for PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  BROKER
+}
+
+enum TransactionType {
+  RENT
+  SALE
+}
+
+enum RequestStatus {
+  NEW
+  OFFERING
+  TOUR
+  SHORTLIST
+  NEGOTIATION
+  HOT_SIGNED
+  ON_HOLD
+  WON
+  LOST
+}
+
+enum RequestType {
+  RENT
+  SALE
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  MEETING
+  TOUR
+  NOTE
+  TASK
+}
+
+enum OfferGroupStatus {
+  UNFINISHED
+  READY
+}
+
+enum PriceCalcOption {
+  OPTION_ONE
+  OPTION_TWO
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  phone     String?
+  role      Role     @default(BROKER)
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  buildings        Building[]
+  units            Unit[]
+  companies        Company[]
+  persons          Person[]
+  propertyRequests PropertyRequest[]
+  offers           Offer[]
+  activities       Activity[]
+
+  @@map("users")
+}
+
+model Location {
+  id     Int    @id @default(autoincrement())
+  name   String
+  county String
+
+  buildings        Building[]
+  propertyRequests PropertyRequest[]
+
+  @@map("locations")
+}
+
+model Building {
+  id                Int             @id @default(autoincrement())
+  name              String
+  propertyCode      String?
+  totalSqm          Float?
+  availableSqm      Float?
+  address           String?
+  latitude          Float?
+  longitude         Float?
+  transactionType   TransactionType @default(RENT)
+  clearHeight       Float?
+  floorLoading      Float?
+  sprinkler         Boolean         @default(false)
+  heating           String?
+  powerSupply       String?
+  buildingStructure String?
+  lighting          String?
+  gridStructure     String?
+  gridFormat        String?
+  hydrantSystem     Boolean         @default(false)
+  isuAuthorization  Boolean         @default(false)
+  temperature       String?
+  buildToSuit       Boolean         @default(false)
+  polygonPoints     Json?
+  serviceCharge     Float?
+  availableFrom     DateTime?
+  description       String?
+  locationId        Int?
+  userId            Int
+  ownerName         String?
+  ownerPhone        String?
+  ownerEmail        String?
+  minContractYears  Int?
+  osmId             Int?            @unique
+  developerId       Int?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  location  Location?  @relation(fields: [locationId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+  developer Company?  @relation("BuildingDeveloper", fields: [developerId], references: [id], onDelete: SetNull)
+  units     Unit[]
+  offerGroups OfferGroup[]
+
+  @@index([locationId])
+  @@index([userId])
+  @@index([developerId])
+  @@map("buildings")
+}
+
+model Unit {
+  id             Int      @id @default(autoincrement())
+  name           String
+  warehouseSpace Json?
+  officeSpace    Json?
+  sanitarySpace  Json?
+  othersSpace    Json?
+  docks          Int?
+  driveins       Int?
+  usefulHeight      Float?
+  hasOffice         Boolean  @default(false)
+  officeSqm         Float?
+  hasSanitary       Boolean  @default(false)
+  sanitarySqm       Float?
+  warehousePrice    Float?
+  officePrice       Float?
+  maintenancePrice  Float?
+  floorPlan         String?
+  photos            Json?
+  crossDock      Boolean  @default(false)
+  images         Json?
+  buildingId     Int
+  userId         Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  building   Building    @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id])
+  groupItems GroupItem[]
+  tenants    Tenant[]
+
+  @@index([buildingId])
+  @@index([userId])
+  @@map("units")
+}
+
+model Company {
+  id          Int      @id @default(autoincrement())
+  name        String
+  vatNumber   String?
+  jNumber     String?
+  iban        String?
+  address     String?
+  logo        String?
+  openDeals   Int      @default(0)
+  closedDeals Int      @default(0)
+  userId      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id])
+  persons          Person[]
+  propertyRequests PropertyRequest[]
+  offers           Offer[]
+  activities       Activity[]
+  tenants          Tenant[]
+  developedBuildings Building[]      @relation("BuildingDeveloper")
+
+  @@index([userId])
+  @@map("companies")
+}
+
+model Person {
+  id          Int      @id @default(autoincrement())
+  name        String
+  jobTitle    String?
+  emails      Json     @default("[]")
+  phones      Json     @default("[]")
+  source      String?
+  openDeals   Int      @default(0)
+  closedDeals Int      @default(0)
+  companyId   Int?
+  labelId     Int?
+  userId      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company          Company?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  label            Label?            @relation(fields: [labelId], references: [id], onDelete: SetNull)
+  user             User              @relation(fields: [userId], references: [id])
+  propertyRequests PropertyRequest[]
+  offers           Offer[]
+  activities       Activity[]
+
+  @@index([companyId])
+  @@index([labelId])
+  @@index([userId])
+  @@map("persons")
+}
+
+model Label {
+  id        Int      @id @default(autoincrement())
+  name      String
+  color     String   @default("#3B82F6")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  persons Person[]
+
+  @@map("labels")
+}
+
+model PropertyRequest {
+  id                Int            @id @default(autoincrement())
+  name              String
+  numberOfSqm       Int?
+  estimatedFeeValue Float?
+  contractPeriod    Int?
+  breakOptionAfter  Int?
+  startDate         DateTime?
+  requestType       RequestType?
+  status            RequestStatus  @default(NEW)
+  lostReason        String?
+  notes             String?        @db.Text
+  closedAt          DateTime?
+  lastStatusChange  DateTime?
+  companyId         Int?
+  personId          Int?
+  userId            Int
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  company    Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  person     Person?     @relation(fields: [personId], references: [id], onDelete: SetNull)
+  user       User        @relation(fields: [userId], references: [id])
+  locations  Location[]
+  offers     Offer[]
+  activities Activity[]
+
+  @@index([companyId])
+  @@index([personId])
+  @@index([userId])
+  @@index([status])
+  @@map("requests")
+}
+
+model Offer {
+  id                 Int       @id @default(autoincrement())
+  offerCode          String    @unique
+  downloadable       Boolean   @default(false)
+  requestedSqm       Int?
+  requestedType      String?
+  requestedStartDate DateTime?
+  requestedLocations Json?
+  requestId          Int
+  userId             Int
+  companyId          Int?
+  personId           Int?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  request     PropertyRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id])
+  company     Company?        @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  person      Person?         @relation(fields: [personId], references: [id], onDelete: SetNull)
+  offerGroups OfferGroup[]
+
+  @@index([requestId])
+  @@index([userId])
+  @@index([companyId])
+  @@index([personId])
+  @@map("offers")
+}
+
+model OfferGroup {
+  id                Int               @id @default(autoincrement())
+  name              String
+  status            OfferGroupStatus  @default(UNFINISHED)
+  leaseTermMonths   Int?
+  incentiveMonths   Int?
+  earlyAccessMonths Int?
+  startDate         DateTime?
+  priceCalcOption   PriceCalcOption?
+  warehouseSqm      Float?
+  warehouseRentPrice Float?
+  officeSqm         Float?
+  officeRentPrice   Float?
+  sanitarySqm       Float?
+  sanitaryRentPrice Float?
+  othersSqm         Float?
+  othersRentPrice   Float?
+  serviceCharge     Float?
+  serviceChargeType String?
+  docks             Int?
+  driveins          Int?
+  crossDock         Boolean           @default(false)
+  images            Json?
+  address           String?
+  latitude          Float?
+  longitude         Float?
+  polygonPoints     Json?
+  description       String?           @db.Text
+  offerId           Int
+  buildingId        Int
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  offer      Offer       @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  building   Building    @relation(fields: [buildingId], references: [id])
+  groupItems GroupItem[]
+
+  @@index([offerId])
+  @@index([buildingId])
+  @@map("offer_groups")
+}
+
+model GroupItem {
+  id            Int    @id @default(autoincrement())
+  unitName      String
+  warehouseSqm  Float?
+  offerGroupId  Int
+  unitId        Int
+
+  offerGroup OfferGroup @relation(fields: [offerGroupId], references: [id], onDelete: Cascade)
+  unit       Unit       @relation(fields: [unitId], references: [id])
+
+  @@index([offerGroupId])
+  @@index([unitId])
+  @@map("group_items")
+}
+
+model Activity {
+  id           Int          @id @default(autoincrement())
+  title        String
+  date         DateTime
+  time         String?
+  duration     Int?
+  done         Boolean      @default(false)
+  notes        String?      @db.Text
+  activityType ActivityType
+  userId       Int
+  companyId    Int?
+  requestId    Int?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id])
+  company Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  request PropertyRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  persons Person[]
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([requestId])
+  @@index([date])
+  @@map("activities")
+}
+
+model Tenant {
+  id        Int      @id @default(autoincrement())
+  startDate DateTime
+  endDate   DateTime
+  unitId    Int
+  companyId Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  unit    Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@index([unitId])
+  @@index([companyId])
+  @@map("tenants")
+}
