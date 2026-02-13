@@ -19,6 +19,11 @@ enum Role {
   BROKER
 }
 
+enum DealType {
+  REQUEST
+  COLD_SALES
+}
+
 enum TransactionType {
   RENT
   SALE
@@ -58,6 +63,12 @@ enum OfferGroupStatus {
 enum PriceCalcOption {
   OPTION_ONE
   OPTION_TWO
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
 }
 
 // ---------------------------------------------------------------------------
@@ -260,6 +271,7 @@ model PropertyRequest {
   startDate         DateTime?
   requestType       RequestType?
   status            RequestStatus  @default(NEW)
+  dealType          DealType       @default(REQUEST)
   lostReason        String?
   notes             String?        @db.Text
   closedAt          DateTime?
@@ -288,6 +300,9 @@ model Offer {
   id                 Int       @id @default(autoincrement())
   offerCode          String    @unique
   downloadable       Boolean   @default(false)
+  sentAt              DateTime?
+  emailStatus         EmailStatus   @default(PENDING)
+  emailId             String?
   requestedSqm       Int?
   requestedType      String?
   requestedStartDate DateTime?

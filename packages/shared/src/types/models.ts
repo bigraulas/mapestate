@@ -6,6 +6,8 @@ import {
   ActivityType,
   OfferGroupStatus,
   PriceCalcOption,
+  DealType,
+  EmailStatus,
 } from './enums';
 
 export interface User {
@@ -155,6 +157,7 @@ export interface PropertyRequest {
   startDate?: string | null;
   requestType?: RequestType | null;
   status: RequestStatus;
+  dealType: DealType;
   lostReason?: string | null;
   notes?: string | null;
   closedAt?: string | null;
@@ -174,6 +177,9 @@ export interface Offer {
   id: number;
   offerCode: string;
   downloadable: boolean;
+  sentAt?: string | null;
+  emailStatus?: EmailStatus;
+  emailId?: string | null;
   requestedSqm?: number | null;
   requestedType?: string | null;
   requestedStartDate?: string | null;

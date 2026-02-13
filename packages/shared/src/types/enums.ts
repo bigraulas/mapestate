@@ -44,6 +44,22 @@ export enum PriceCalcOption {
   OPTION_TWO = 'OPTION_TWO',
 }
 
+export enum DealType {
+  REQUEST = 'REQUEST',
+  COLD_SALES = 'COLD_SALES',
+}
+
+export const DEAL_TYPE_LABELS: Record<DealType, string> = {
+  [DealType.REQUEST]: 'Din Cerere',
+  [DealType.COLD_SALES]: 'Cold Sales',
+};
+
+export enum EmailStatus {
+  PENDING = 'PENDING',
+  SENT = 'SENT',
+  FAILED = 'FAILED',
+}
+
 export const REQUEST_STATUS_ORDER: RequestStatus[] = [
   RequestStatus.NEW,
   RequestStatus.OFFERING,
