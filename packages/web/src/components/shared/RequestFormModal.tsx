@@ -340,7 +340,7 @@ export default function RequestFormModal({
                 className="input"
                 placeholder="Nume persoana *"
               />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <input
                   type="email"
                   value={newPersonEmail}
@@ -387,7 +387,7 @@ export default function RequestFormModal({
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
             Criterii cautare
           </p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="req-sqm" className="label">
                 Suprafata (mp)

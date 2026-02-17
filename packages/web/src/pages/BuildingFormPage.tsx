@@ -24,10 +24,13 @@ interface GeoFeature {
 async function searchAddress(query: string): Promise<GeoFeature[]> {
   try {
     const q = encodeURIComponent(query);
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${q}.json?access_token=${MAPBOX_TOKEN}&limit=5&country=ro&language=ro`;
+    const url = `https://api.mapbox.com/search/geocode/v6/forward?q=${q}&access_token=${MAPBOX_TOKEN}&limit=5&country=RO&language=ro`;
     const res = await fetch(url);
     const data = await res.json();
-    return data.features ?? [];
+    return (data.features ?? []).map((f: Record<string, unknown>) => ({
+      place_name: (f.properties as Record<string, string>)?.full_address || (f.properties as Record<string, string>)?.name || '',
+      center: (f.geometry as { coordinates: [number, number] }).coordinates,
+    }));
   } catch {
     return [];
   }
@@ -35,10 +38,11 @@ async function searchAddress(query: string): Promise<GeoFeature[]> {
 
 async function reverseGeocode(lng: number, lat: number): Promise<string | null> {
   try {
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&limit=1&language=ro`;
+    const url = `https://api.mapbox.com/search/geocode/v6/reverse?longitude=${lng}&latitude=${lat}&access_token=${MAPBOX_TOKEN}&limit=1&language=ro`;
     const res = await fetch(url);
     const data = await res.json();
-    return data.features?.[0]?.place_name ?? null;
+    const feat = data.features?.[0];
+    return feat?.properties?.full_address || feat?.properties?.name || null;
   } catch {
     return null;
   }

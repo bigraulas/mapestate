@@ -244,7 +244,7 @@ export default function UsersPage() {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <Settings className="w-6 h-6 text-primary-600" />
           <div>
@@ -284,7 +284,7 @@ export default function UsersPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="user-first" className="label">
                 Prenume *
@@ -343,7 +343,7 @@ export default function UsersPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="user-phone" className="label">
                 Telefon

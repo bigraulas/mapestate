@@ -111,18 +111,18 @@ export default function BuildingDetailPage() {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => navigate('/proprietati')}
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex-shrink-0"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <Building2 className="w-6 h-6 text-primary-600" />
-          <div>
-            <h1 className="page-title">{building.name}</h1>
-            <div className="flex items-center gap-2 mt-0.5">
+          <Building2 className="w-6 h-6 text-primary-600 flex-shrink-0" />
+          <div className="min-w-0">
+            <h1 className="page-title truncate">{building.name}</h1>
+            <div className="flex flex-wrap items-center gap-2 mt-0.5">
               {building.location && (
                 <span className="text-sm text-slate-500">
                   {building.location.name}, {building.location.county}
@@ -143,7 +143,7 @@ export default function BuildingDetailPage() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {isAdmin && (
             <button
               onClick={() => { setReassignUserId(''); setReassignOpen(true); }}

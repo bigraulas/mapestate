@@ -224,7 +224,7 @@ export default function PersonsPage() {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <Users className="w-6 h-6 text-primary-600" />
           <div>

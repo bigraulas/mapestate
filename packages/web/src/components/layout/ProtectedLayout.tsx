@@ -47,7 +47,7 @@ export default function ProtectedLayout() {
 
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header onMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)} />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <Outlet />
         </main>
       </div>

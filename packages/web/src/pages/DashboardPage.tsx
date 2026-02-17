@@ -203,7 +203,7 @@ export default function DashboardPage() {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <LayoutDashboard className="w-6 h-6 text-primary-600" />
           <div>
@@ -217,7 +217,7 @@ export default function DashboardPage() {
           <select
             value={selectedBrokerId ?? ''}
             onChange={(e) => setSelectedBrokerId(e.target.value ? Number(e.target.value) : undefined)}
-            className="input !w-auto min-w-[200px]"
+            className="input !w-auto"
           >
             <option value="">Toti brokerii</option>
             {brokers.map((b) => (

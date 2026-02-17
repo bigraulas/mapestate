@@ -230,7 +230,7 @@ export default function ActivitiesPage() {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <Calendar className="w-6 h-6 text-primary-600" />
           <div>
@@ -247,7 +247,7 @@ export default function ActivitiesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 mb-4 bg-white rounded-lg border border-slate-200 p-1 w-fit">
+      <div className="flex items-center gap-1 mb-4 bg-white rounded-lg border border-slate-200 p-1 w-fit overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.key}
@@ -433,7 +433,7 @@ export default function ActivitiesPage() {
             </select>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label htmlFor="act-date" className="label">
                 Data *
@@ -475,7 +475,7 @@ export default function ActivitiesPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="act-company" className="label">
                 Companie

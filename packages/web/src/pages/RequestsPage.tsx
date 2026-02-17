@@ -236,7 +236,7 @@ export default function RequestsPage() {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <FileText className="w-6 h-6 text-primary-600" />
           <div>
@@ -253,7 +253,7 @@ export default function RequestsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 mb-4 bg-white rounded-lg border border-slate-200 p-1 w-fit">
+      <div className="flex items-center gap-1 mb-4 bg-white rounded-lg border border-slate-200 p-1 w-fit overflow-x-auto">
         <button
           onClick={() => setActiveTab('table')}
           className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${

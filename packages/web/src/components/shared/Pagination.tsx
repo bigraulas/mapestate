@@ -14,7 +14,7 @@ export default function Pagination({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
+    <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 flex-wrap gap-2">
       <span className="text-sm text-slate-500">
         Pagina {page} din {totalPages}
       </span>

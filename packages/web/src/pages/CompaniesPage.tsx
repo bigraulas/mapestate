@@ -154,7 +154,7 @@ export default function CompaniesPage() {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <Building className="w-6 h-6 text-primary-600" />
           <div>
@@ -216,8 +216,8 @@ export default function CompaniesPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-slate-500">
-                      {person.emails?.[0] && <span>{person.emails[0]}</span>}
-                      {person.phones?.[0] && <span>{person.phones[0]}</span>}
+                      {person.emails?.[0] && <span className="truncate">{person.emails[0]}</span>}
+                      {person.phones?.[0] && <span className="truncate">{person.phones[0]}</span>}
                     </div>
                   </div>
                 ))}
@@ -263,7 +263,7 @@ export default function CompaniesPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">CUI</label>
               <input

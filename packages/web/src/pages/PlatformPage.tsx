@@ -99,7 +99,7 @@ export default function PlatformPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Agentii</h1>
           <p className="text-sm text-slate-500 mt-1">
@@ -126,7 +126,7 @@ export default function PlatformPage() {
           <p className="text-slate-500">Nicio agentie inregistrata</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
@@ -258,7 +258,7 @@ export default function PlatformPage() {
                       required
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="label">Prenume *</label>
                       <input

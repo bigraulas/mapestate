@@ -807,7 +807,7 @@ export default function DealDetailPage() {
           </button>
           {showDetails && (
             <div className="px-4 pb-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
                   { label: 'Companie', value: deal.company?.name },
                   { label: 'Contact', value: deal.person?.name },
@@ -1134,7 +1134,7 @@ export default function DealDetailPage() {
           {/* Criteria */}
           <div className="border-t border-slate-100 pt-4">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Criterii</p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="edit-sqm" className="label">Suprafata (mp)</label>
                 <input

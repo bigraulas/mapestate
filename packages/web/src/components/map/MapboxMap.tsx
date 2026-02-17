@@ -340,11 +340,11 @@ export default function MapboxMap({
     }
   }, [pickMode, mapLoaded, onCoordinatePick]);
 
-  // Single marker for forms
+  // Single marker for forms (works in both pickMode and non-pickMode)
   useEffect(() => {
     if (!map.current || !mapLoaded) return;
 
-    if (markerPosition && !pickMode) {
+    if (markerPosition) {
       if (pickerMarkerRef.current) {
         pickerMarkerRef.current.setLngLat([markerPosition.lng, markerPosition.lat]);
       } else {
@@ -361,15 +361,23 @@ export default function MapboxMap({
         pickerMarkerRef.current = new mapboxgl.Marker({
           element: el,
           anchor: 'bottom',
+          draggable: pickMode,
         })
           .setLngLat([markerPosition.lng, markerPosition.lat])
           .addTo(map.current!);
+
+        if (pickMode) {
+          pickerMarkerRef.current.on('dragend', () => {
+            const lnglat = pickerMarkerRef.current!.getLngLat();
+            onCoordinatePick?.(lnglat.lng, lnglat.lat);
+          });
+        }
       }
     } else if (!markerPosition && pickerMarkerRef.current) {
       pickerMarkerRef.current.remove();
       pickerMarkerRef.current = null;
     }
-  }, [markerPosition, mapLoaded, pickMode]);
+  }, [markerPosition, mapLoaded, pickMode, onCoordinatePick]);
 
   const toggle3D = useCallback(() => {
     if (!map.current) return;
