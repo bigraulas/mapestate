@@ -41,6 +41,9 @@ COPY --from=builder /app/packages/api/prisma/ packages/api/prisma/
 COPY --from=builder /app/packages/shared/ packages/shared/
 COPY --from=builder /app/packages/api/package.json packages/api/package.json
 
+# Copy font assets for PDF generation (Romanian diacritics support)
+COPY --from=builder /app/packages/api/assets/ packages/api/assets/
+
 # Create uploads directory with proper permissions
 RUN mkdir -p packages/api/uploads && chown -R node:node /app
 

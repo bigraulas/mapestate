@@ -55,12 +55,16 @@ export class EmailService {
 
     try {
       const result = await this.resend.emails.send({
-        from: this.config.get('RESEND_FROM_EMAIL', 'noreply@mapestate.ro'),
+        from: this.config.get('RESEND_FROM_EMAIL', 'noreply@mapestate.eu'),
         to: [to],
         subject: `Invitatie - ${agencyName} pe MapEstate`,
         html,
       });
 
+      if (result.error) {
+        this.logger.error('Resend invitation error: ' + JSON.stringify(result.error));
+        return { emailId: null, status: 'FAILED' as const };
+      }
       this.logger.log('Invitation email sent: ' + result.data?.id);
       return { emailId: result.data?.id, status: 'SENT' as const };
     } catch (error) {
@@ -110,13 +114,17 @@ export class EmailService {
 
     try {
       const result = await this.resend.emails.send({
-        from: this.config.get('RESEND_FROM_EMAIL', 'noreply@mapestate.ro'),
+        from: this.config.get('RESEND_FROM_EMAIL', 'noreply@mapestate.eu'),
         to,
         subject,
         html,
         attachments,
       });
 
+      if (result.error) {
+        this.logger.error('Resend error: ' + JSON.stringify(result.error));
+        return { emailId: null, status: 'FAILED' as const };
+      }
       this.logger.log('Email sent: ' + result.data?.id);
       return { emailId: result.data?.id, status: 'SENT' as const };
     } catch (error) {

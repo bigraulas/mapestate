@@ -11,6 +11,11 @@ const PDFDocument = require('pdfkit');
 const SLIDE_W = 960;
 const SLIDE_H = 540;
 
+// Font paths (Roboto supports Romanian diacritics: ă, â, î, ș, ț)
+const FONT_DIR = path.join(__dirname, '..', '..', 'assets', 'fonts');
+const FONT_REGULAR = path.join(FONT_DIR, 'Roboto-Regular.ttf');
+const FONT_BOLD = path.join(FONT_DIR, 'Roboto-Bold.ttf');
+
 // Brand colors
 const TEAL = '#0d9488';
 const TEAL_DARK = '#0f766e';
@@ -199,6 +204,12 @@ export class PdfGeneratorService {
         margin: 0,
         autoFirstPage: false,
       });
+
+      // Register Roboto fonts (Unicode support for Romanian diacritics)
+      if (fs.existsSync(FONT_REGULAR)) {
+        doc.registerFont('Roboto', FONT_REGULAR);
+        doc.registerFont('Roboto-Bold', fs.existsSync(FONT_BOLD) ? FONT_BOLD : FONT_REGULAR);
+      }
       const chunks: Buffer[] = [];
       doc.on('data', (chunk: Buffer) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
@@ -262,7 +273,7 @@ export class PdfGeneratorService {
         : 'Warehouse – market research';
 
     doc
-      .font('Helvetica-Bold')
+      .font('Roboto-Bold')
       .fontSize(36)
       .fillColor(WHITE)
       .text(title, 60, 140, { width: SLIDE_W - 120 });
@@ -274,7 +285,7 @@ export class PdfGeneratorService {
         : '';
     if (locationText) {
       doc
-        .font('Helvetica')
+        .font('Roboto')
         .fontSize(18)
         .fillColor('rgba(255,255,255,0.85)')
         .text(locationText, 60, 195, { width: SLIDE_W - 120 });
@@ -287,7 +298,7 @@ export class PdfGeneratorService {
       year: 'numeric',
     });
     doc
-      .font('Helvetica')
+      .font('Roboto')
       .fontSize(14)
       .fillColor('rgba(255,255,255,0.7)')
       .text(dateStr, 60, 230);
@@ -295,12 +306,12 @@ export class PdfGeneratorService {
     // "To:" + Company name
     if (deal.company) {
       doc
-        .font('Helvetica')
+        .font('Roboto')
         .fontSize(12)
         .fillColor('rgba(255,255,255,0.6)')
         .text('To:', 60, 320);
       doc
-        .font('Helvetica-Bold')
+        .font('Roboto-Bold')
         .fontSize(20)
         .fillColor(WHITE)
         .text(deal.company.name, 60, 340, { width: 500 });
@@ -327,7 +338,7 @@ export class PdfGeneratorService {
     const listX = 40;
     let listY = 80;
     doc
-      .font('Helvetica-Bold')
+      .font('Roboto-Bold')
       .fontSize(14)
       .fillColor(TEAL)
       .text('PROPOSALS:', listX, listY);
@@ -335,16 +346,16 @@ export class PdfGeneratorService {
 
     buildings.forEach((b, i) => {
       doc
-        .font('Helvetica-Bold')
+        .font('Roboto-Bold')
         .fontSize(11)
         .fillColor(DARK)
         .text(`${i + 1}.`, listX, listY, { continued: true })
-        .font('Helvetica')
+        .font('Roboto')
         .text(`  ${b.name}`, { width: 280 });
 
       if (b.location) {
         doc
-          .font('Helvetica')
+          .font('Roboto')
           .fontSize(9)
           .fillColor(GRAY)
           .text(`   ${b.location.name}`, listX + 20, listY + 16, {
@@ -373,7 +384,7 @@ export class PdfGeneratorService {
         .rect(mapX, mapY, mapW, mapH)
         .fill(BG_LIGHT);
       doc
-        .font('Helvetica')
+        .font('Roboto')
         .fontSize(12)
         .fillColor(GRAY)
         .text('Map not available', mapX + mapW / 2 - 50, mapY + mapH / 2);
@@ -404,7 +415,7 @@ export class PdfGeneratorService {
 
     // Commercial specs
     doc
-      .font('Helvetica-Bold')
+      .font('Roboto-Bold')
       .fontSize(11)
       .fillColor(TEAL)
       .text('COMMERCIAL SPECS', colX, y);
@@ -471,7 +482,7 @@ export class PdfGeneratorService {
 
     // Technical specs
     doc
-      .font('Helvetica-Bold')
+      .font('Roboto-Bold')
       .fontSize(11)
       .fillColor(TEAL)
       .text('TECHNICAL SPECS', colX, y);
@@ -582,13 +593,13 @@ export class PdfGeneratorService {
       const brokerName = `${user.firstName} ${user.lastName}`;
 
       doc
-        .font('Helvetica-Bold')
+        .font('Roboto-Bold')
         .fontSize(28)
         .fillColor(WHITE)
         .text(brokerName, 60, 140, { width: 500 });
 
       doc
-        .font('Helvetica')
+        .font('Roboto')
         .fontSize(14)
         .fillColor('rgba(255,255,255,0.8)')
         .text('Industrial Real Estate Consultant', 60, 180);
@@ -596,14 +607,14 @@ export class PdfGeneratorService {
       let contactY = 220;
       if (user.phone) {
         doc
-          .font('Helvetica')
+          .font('Roboto')
           .fontSize(13)
           .fillColor(WHITE)
           .text(`T: ${user.phone}`, 60, contactY);
         contactY += 22;
       }
       doc
-        .font('Helvetica')
+        .font('Roboto')
         .fontSize(13)
         .fillColor(WHITE)
         .text(`E: ${user.email}`, 60, contactY);
@@ -612,7 +623,7 @@ export class PdfGeneratorService {
       if (agency.address) {
         contactY += 15;
         doc
-          .font('Helvetica')
+          .font('Roboto')
           .fontSize(11)
           .fillColor('rgba(255,255,255,0.7)')
           .text(agency.address, 60, contactY, { width: 400 });
@@ -643,7 +654,7 @@ export class PdfGeneratorService {
     // Disclaimer
     const companyName = deal.company?.name || 'the client';
     doc
-      .font('Helvetica')
+      .font('Roboto')
       .fontSize(7)
       .fillColor('rgba(255,255,255,0.5)')
       .text(
@@ -768,14 +779,14 @@ export class PdfGeneratorService {
 
     // Title right-aligned area
     doc
-      .font('Helvetica-Bold')
+      .font('Roboto-Bold')
       .fontSize(16)
       .fillColor(DARK)
       .text(title, 40, 20, { width: SLIDE_W - 80 });
 
     if (subtitle) {
       doc
-        .font('Helvetica')
+        .font('Roboto')
         .fontSize(10)
         .fillColor(GRAY)
         .text(subtitle, 40, 42, { width: SLIDE_W - 80 });
@@ -800,13 +811,13 @@ export class PdfGeneratorService {
       }
 
       doc
-        .font('Helvetica')
+        .font('Roboto')
         .fontSize(9)
         .fillColor(GRAY)
         .text(label, x + 8, y, { width: labelW });
 
       doc
-        .font('Helvetica-Bold')
+        .font('Roboto-Bold')
         .fontSize(9)
         .fillColor(DARK)
         .text(value, x + labelW + 8, y, { width: width - labelW - 16 });
@@ -874,7 +885,7 @@ export class PdfGeneratorService {
       }
     }
     doc
-      .font('Helvetica-Bold')
+      .font('Roboto-Bold')
       .fontSize(12)
       .fillColor(color)
       .text(agency.name || 'MapEstate', x, y - 12);
@@ -882,7 +893,7 @@ export class PdfGeneratorService {
 
   private drawAgencyNameLarge(doc: any, agency: AgencyData, x: number, y: number) {
     doc
-      .font('Helvetica-Bold')
+      .font('Roboto-Bold')
       .fontSize(36)
       .fillColor(WHITE)
       .text(agency.name || 'MapEstate', x, y, { width: 220, align: 'center' });
@@ -897,7 +908,7 @@ export class PdfGeneratorService {
   ) {
     doc.rect(x, y, w, h).fill(BG_LIGHT);
     doc
-      .font('Helvetica')
+      .font('Roboto')
       .fontSize(11)
       .fillColor(LIGHT_GRAY)
       .text('Satellite view', x, y + h / 2 - 6, {
