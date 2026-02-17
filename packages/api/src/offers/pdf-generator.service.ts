@@ -16,9 +16,8 @@ const FONT_DIR = path.join(__dirname, '..', '..', 'assets', 'fonts');
 const FONT_REGULAR = path.join(FONT_DIR, 'Roboto-Regular.ttf');
 const FONT_BOLD = path.join(FONT_DIR, 'Roboto-Bold.ttf');
 
-// Brand colors
-const TEAL = '#0d9488';
-const TEAL_DARK = '#0f766e';
+// Brand colors (BRAND is set dynamically from agency.primaryColor)
+const DEFAULT_BRAND = '#0d9488';
 const WHITE = '#ffffff';
 const DARK = '#1e293b';
 const GRAY = '#64748b';
@@ -126,6 +125,7 @@ export class PdfGeneratorService {
   private readonly logger = new Logger(PdfGeneratorService.name);
   private readonly uploadDir: string;
   private imageCache = new Map<string, Buffer | null>();
+  private BRAND = DEFAULT_BRAND;
 
   constructor(private readonly config: ConfigService) {
     this.uploadDir = this.config.get('UPLOAD_DIR', './uploads');
@@ -138,6 +138,9 @@ export class PdfGeneratorService {
   ): Promise<Buffer> {
     // Clear image cache from previous generation
     this.imageCache.clear();
+
+    // Use agency's primary color or default
+    this.BRAND = agency.primaryColor || DEFAULT_BRAND;
 
     const mapboxToken = this.config.get<string>('MAPBOX_TOKEN', '');
 
@@ -250,7 +253,7 @@ export class PdfGeneratorService {
     doc.addPage();
 
     // Background gradient (solid teal since pdfkit doesn't do gradients easily)
-    doc.rect(0, 0, SLIDE_W, SLIDE_H).fill(TEAL);
+    doc.rect(0, 0, SLIDE_W, SLIDE_H).fill(this.BRAND);
 
     // If agency has a cover image, try to use it
     if (agency.coverImage) {
@@ -340,7 +343,7 @@ export class PdfGeneratorService {
     doc
       .font('Roboto-Bold')
       .fontSize(14)
-      .fillColor(TEAL)
+      .fillColor(this.BRAND)
       .text('PROPOSALS:', listX, listY);
     listY += 30;
 
@@ -391,7 +394,7 @@ export class PdfGeneratorService {
     }
 
     // Agency branding bottom-left
-    this.drawAgencyBranding(doc, agency, 40, SLIDE_H - 40, TEAL);
+    this.drawAgencyBranding(doc, agency, 40, SLIDE_H - 40, this.BRAND);
   }
 
   private renderSpecsSlide(
@@ -417,7 +420,7 @@ export class PdfGeneratorService {
     doc
       .font('Roboto-Bold')
       .fontSize(11)
-      .fillColor(TEAL)
+      .fillColor(this.BRAND)
       .text('COMMERCIAL SPECS', colX, y);
     y += 20;
 
@@ -484,7 +487,7 @@ export class PdfGeneratorService {
     doc
       .font('Roboto-Bold')
       .fontSize(11)
-      .fillColor(TEAL)
+      .fillColor(this.BRAND)
       .text('TECHNICAL SPECS', colX, y);
     y += 20;
 
@@ -549,7 +552,7 @@ export class PdfGeneratorService {
     }
 
     // Agency branding
-    this.drawAgencyBranding(doc, agency, 40, SLIDE_H - 40, TEAL);
+    this.drawAgencyBranding(doc, agency, 40, SLIDE_H - 40, this.BRAND);
   }
 
   private renderPhotosSlide(
@@ -579,13 +582,13 @@ export class PdfGeneratorService {
       this.layoutPhotos(doc, batchPhotos, areaX, areaY, areaW, areaH);
 
       // Agency branding
-      this.drawAgencyBranding(doc, agency, 40, SLIDE_H - 40, TEAL);
+      this.drawAgencyBranding(doc, agency, 40, SLIDE_H - 40, this.BRAND);
     }
   }
 
   private renderContactSlide(doc: any, deal: DealData, agency: AgencyData) {
     doc.addPage();
-    doc.rect(0, 0, SLIDE_W, SLIDE_H).fill(TEAL);
+    doc.rect(0, 0, SLIDE_W, SLIDE_H).fill(this.BRAND);
 
     // Broker info (left side)
     const user = deal.user;
@@ -775,7 +778,7 @@ export class PdfGeneratorService {
 
   private drawSlideHeader(doc: any, title: string, subtitle: string) {
     // Teal accent line at top
-    doc.rect(0, 0, SLIDE_W, 4).fill(TEAL);
+    doc.rect(0, 0, SLIDE_W, 4).fill(this.BRAND);
 
     // Title right-aligned area
     doc
