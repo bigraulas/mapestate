@@ -7,6 +7,7 @@ interface SendOfferEmailParams {
   subject: string;
   dealName: string;
   companyName?: string;
+  agencyName?: string;
   buildings: Array<{
     name: string;
     address?: string;
@@ -54,8 +55,10 @@ export class EmailService {
     `;
 
     try {
+      const fromEmail = this.config.get('RESEND_FROM_EMAIL', 'noreply@mapestate.eu');
+      const from = agencyName ? `${agencyName} <${fromEmail}>` : fromEmail;
       const result = await this.resend.emails.send({
-        from: this.config.get('RESEND_FROM_EMAIL', 'noreply@mapestate.eu'),
+        from,
         to: [to],
         subject: `Invitatie - ${agencyName} pe MapEstate`,
         html,
@@ -74,7 +77,7 @@ export class EmailService {
   }
 
   async sendOfferEmail(params: SendOfferEmailParams) {
-    const { to, subject, dealName, companyName, buildings, message, pdfBuffer } = params;
+    const { to, subject, dealName, companyName, agencyName, buildings, message, pdfBuffer } = params;
 
     const buildingRows = buildings
       .map(
@@ -113,8 +116,10 @@ export class EmailService {
       : [];
 
     try {
+      const fromEmail = this.config.get('RESEND_FROM_EMAIL', 'noreply@mapestate.eu');
+      const from = agencyName ? `${agencyName} <${fromEmail}>` : fromEmail;
       const result = await this.resend.emails.send({
-        from: this.config.get('RESEND_FROM_EMAIL', 'noreply@mapestate.eu'),
+        from,
         to,
         subject,
         html,
