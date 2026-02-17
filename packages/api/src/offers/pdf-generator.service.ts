@@ -269,11 +269,8 @@ export class PdfGeneratorService {
       }
     }
 
-    // Title
-    const title =
-      deal.dealType === 'COLD_SALES'
-        ? 'Industrial Real Estate'
-        : 'Warehouse – market research';
+    // Title — use deal name (e.g. "Maspex - Depozit Logistic Bucuresti")
+    const title = deal.name;
 
     doc
       .font('Roboto-Bold')
