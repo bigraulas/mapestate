@@ -956,9 +956,11 @@ export class PdfGeneratorService {
       return null;
     }
 
-    // Handle relative upload paths (e.g., "/uploads/abc.jpg" or "uploads/abc.jpg")
+    // Handle upload paths (e.g., "/api/uploads/abc.jpg", "/uploads/abc.jpg")
     let localPath = filePath;
-    if (filePath.startsWith('/uploads/')) {
+    if (filePath.startsWith('/api/uploads/')) {
+      localPath = path.resolve(this.uploadDir, filePath.replace('/api/uploads/', ''));
+    } else if (filePath.startsWith('/uploads/')) {
       localPath = path.resolve(this.uploadDir, filePath.replace('/uploads/', ''));
     } else if (filePath.startsWith('uploads/')) {
       localPath = path.resolve(this.uploadDir, filePath.replace('uploads/', ''));
