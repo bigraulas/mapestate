@@ -248,7 +248,7 @@ export default function DealsPage() {
             ? 'bg-amber-100 text-amber-700'
             : 'bg-blue-100 text-blue-700'
         }`}>
-          {r.dealType === 'COLD_SALES' ? 'Cold Sales' : 'Din Cerere'}
+          {r.dealType === 'COLD_SALES' ? 'Ofertare in Masa' : 'Cerere Noua'}
         </span>
       ),
     },
@@ -352,14 +352,14 @@ export default function DealsPage() {
         <div className="flex items-center gap-2">
           <button className="btn-primary" onClick={() => setFormOpen(true)}>
             <Plus className="w-4 h-4" />
-            <span>Din Cerere</span>
+            <span>Cerere Noua</span>
           </button>
           <button
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors"
             onClick={() => setColdSalesOpen(true)}
           >
             <Zap className="w-4 h-4" />
-            <span>Cold Sales</span>
+            <span>Ofertare in Masa</span>
           </button>
         </div>
       </div>
@@ -464,7 +464,7 @@ export default function DealsPage() {
                               </p>
                               {req.dealType === 'COLD_SALES' && (
                                 <span className="text-[10px] font-medium bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded shrink-0">
-                                  Cold
+                                  Masa
                                 </span>
                               )}
                             </div>

@@ -205,7 +205,7 @@ export default function ColdSalesModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Cold Sales - Trimite oferte">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Ofertare in Masa - Trimite oferte">
       <div className="space-y-5">
         {error && (
           <div className="rounded-lg bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">

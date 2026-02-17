@@ -175,7 +175,7 @@ export class OffersService {
   async sendOffers(dto: SendOffersDto, userId: number) {
     const deal = await this.prisma.propertyRequest.findUnique({
       where: { id: dto.dealId },
-      include: { company: true, person: true, locations: true },
+      include: { company: true, person: true, locations: true, user: { include: { agency: true } } },
     });
 
     if (!deal) {
@@ -242,11 +242,13 @@ export class OffersService {
     }
 
     // Send email
+    const agencyName = (deal as any).user?.agency?.name || 'MapEstate';
     const emailResult = await this.emailService.sendOfferEmail({
       to: recipientEmails,
       subject: 'Oferta: ' + deal.name,
       dealName: deal.name,
       companyName: deal.company?.name,
+      agencyName,
       buildings: buildings.map((b) => ({
         name: b.name,
         address: b.address || undefined,

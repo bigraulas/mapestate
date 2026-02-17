@@ -56,8 +56,8 @@ export enum DealType {
 }
 
 export const DEAL_TYPE_LABELS: Record<DealType, string> = {
-  [DealType.REQUEST]: 'Din Cerere',
-  [DealType.COLD_SALES]: 'Cold Sales',
+  [DealType.REQUEST]: 'Cerere Noua',
+  [DealType.COLD_SALES]: 'Ofertare in Masa',
 };
 
 export enum EmailStatus {
