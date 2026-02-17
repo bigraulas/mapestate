@@ -8,7 +8,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import type { Company, Person, PaginatedResponse } from '@dunwell/shared';
+import type { Company, Person, PaginatedResponse } from '@mapestate/shared';
 import { companiesService } from '@/services';
 import DataTable, { type Column } from '@/components/shared/DataTable';
 import Pagination from '@/components/shared/Pagination';

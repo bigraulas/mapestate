@@ -22,8 +22,8 @@
     "rootDir": "./src",
     "baseUrl": "./",
     "paths": {
-      "@dunwell/shared": ["../shared/src"],
-      "@dunwell/shared/*": ["../shared/src/*"]
+      "@mapestate/shared": ["../shared/src"],
+      "@mapestate/shared/*": ["../shared/src/*"]
     }
   },
   "include": ["src/**/*"],

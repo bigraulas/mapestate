@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { X, Save, Loader2, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import type { Unit } from '@dunwell/shared';
+import type { Unit } from '@mapestate/shared';
 import { unitsService } from '@/services';
 import FileUpload from '@/components/shared/FileUpload';
 

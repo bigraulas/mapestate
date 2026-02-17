@@ -9,8 +9,8 @@ import {
   MapPin,
   Crosshair,
 } from 'lucide-react';
-import type { Building } from '@dunwell/shared';
-import { TransactionType } from '@dunwell/shared';
+import type { Building } from '@mapestate/shared';
+import { TransactionType } from '@mapestate/shared';
 import { buildingsService } from '@/services';
 import { MapboxMap } from '@/components/map';
 

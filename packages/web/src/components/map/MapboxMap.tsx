@@ -87,6 +87,8 @@ export default function MapboxMap({
       style: 'mapbox://styles/mapbox/light-v11',
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
+      pitch: 45,
+      bearing: -17.6,
     });
 
     const m = map.current;

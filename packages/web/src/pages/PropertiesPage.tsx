@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Plus, Table2, Map, Loader2 } from 'lucide-react';
-import type { Building, PaginatedResponse } from '@dunwell/shared';
-import { TransactionType } from '@dunwell/shared';
+import type { Building, PaginatedResponse } from '@mapestate/shared';
+import { TransactionType } from '@mapestate/shared';
 import { buildingsService } from '@/services';
 import DataTable, { type Column } from '@/components/shared/DataTable';
 import Pagination from '@/components/shared/Pagination';
@@ -96,7 +96,7 @@ const brokerColumn: Column<Building> = {
 export default function PropertiesPage() {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>('tabel');
+  const [activeTab, setActiveTab] = useState<Tab>('harta');
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);

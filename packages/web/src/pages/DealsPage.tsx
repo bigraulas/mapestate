@@ -13,7 +13,7 @@ import {
   RequestStatus,
   REQUEST_STATUS_LABELS,
   REQUEST_STATUS_COLORS,
-} from '@dunwell/shared';
+} from '@mapestate/shared';
 import { useAuth } from '@/hooks/useAuth';
 import { dealsService } from '@/services/deals.service';
 import { usersService } from '@/services/users.service';

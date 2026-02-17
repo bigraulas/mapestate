@@ -19,6 +19,7 @@ import {
   ChevronUp,
   FileText,
   UserPlus,
+  Pencil,
 } from 'lucide-react';
 import {
   RequestStatus,
@@ -26,15 +27,17 @@ import {
   DealType,
   DEAL_TYPE_LABELS,
   ACTIVITY_TYPE_LABELS,
-} from '@dunwell/shared';
+} from '@mapestate/shared';
 import type {
   PropertyRequest,
   Activity,
   Offer,
   ActivityType,
-} from '@dunwell/shared';
+} from '@mapestate/shared';
 import { dealsService } from '@/services/deals.service';
 import { usersService } from '@/services/users.service';
+import { companiesService } from '@/services/companies.service';
+import { personsService } from '@/services/persons.service';
 import { useAuth } from '@/hooks/useAuth';
 import StatusBadge from '@/components/shared/StatusBadge';
 import Modal from '@/components/shared/Modal';
@@ -128,6 +131,25 @@ export default function DealDetailPage() {
   const [reassignSubmitting, setReassignSubmitting] = useState(false);
   const [brokersList, setBrokersList] = useState<{id: number; firstName: string; lastName: string}[]>([]);
 
+  // Edit deal
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [editForm, setEditForm] = useState({
+    name: '',
+    requestType: 'RENT' as string,
+    companyId: '' as string,
+    personId: '' as string,
+    numberOfSqm: '' as string,
+    minHeight: '' as string,
+    estimatedFeeValue: '' as string,
+    contractPeriod: '' as string,
+    startDate: '' as string,
+    notes: '' as string,
+  });
+  const [editCompanies, setEditCompanies] = useState<{id: number; name: string}[]>([]);
+  const [editPersons, setEditPersons] = useState<{id: number; name: string; companyId?: number | null}[]>([]);
+
   // ----- Data fetching -----
 
   const fetchDeal = useCallback(async () => {
@@ -199,6 +221,74 @@ export default function DealDetailPage() {
     };
     fetchBrokers();
   }, [reassignOpen, brokersList.length]);
+
+  // Load companies/persons + pre-fill form when edit modal opens
+  useEffect(() => {
+    if (!editOpen || !deal) return;
+    setEditForm({
+      name: deal.name || '',
+      requestType: deal.requestType || 'RENT',
+      companyId: deal.company?.id ? String(deal.company.id) : '',
+      personId: deal.person?.id ? String(deal.person.id) : '',
+      numberOfSqm: deal.numberOfSqm != null ? String(deal.numberOfSqm) : '',
+      minHeight: (deal as any).minHeight != null ? String((deal as any).minHeight) : '',
+      estimatedFeeValue: deal.estimatedFeeValue != null ? String(deal.estimatedFeeValue) : '',
+      contractPeriod: deal.contractPeriod != null ? String(deal.contractPeriod) : '',
+      startDate: deal.startDate ? new Date(deal.startDate).toISOString().split('T')[0] : '',
+      notes: deal.notes || '',
+    });
+    setEditError('');
+    const loadLists = async () => {
+      try {
+        const [compRes, persRes] = await Promise.all([
+          companiesService.getAll({ page: 1, limit: 500 }),
+          personsService.getAll({ page: 1, limit: 500 }),
+        ]);
+        setEditCompanies(compRes.data?.data || compRes.data || []);
+        setEditPersons(persRes.data?.data || persRes.data || []);
+      } catch {}
+    };
+    if (editCompanies.length === 0) loadLists();
+  }, [editOpen, deal]);
+
+  const handleEditSubmit = async () => {
+    if (!deal) return;
+    if (!editForm.companyId) { setEditError('Selecteaza un client.'); return; }
+    if (!editForm.personId) { setEditError('Selecteaza o persoana de contact.'); return; }
+    setEditSubmitting(true);
+    setEditError('');
+    try {
+      const payload: Record<string, unknown> = {
+        name: editForm.name,
+        requestType: editForm.requestType,
+        companyId: Number(editForm.companyId),
+        personId: Number(editForm.personId),
+      };
+      if (editForm.numberOfSqm) payload.numberOfSqm = Number(editForm.numberOfSqm);
+      if (editForm.minHeight) payload.minHeight = Number(editForm.minHeight);
+      if (editForm.estimatedFeeValue) payload.estimatedFeeValue = Number(editForm.estimatedFeeValue);
+      if (editForm.contractPeriod) payload.contractPeriod = Number(editForm.contractPeriod);
+      if (editForm.startDate) payload.startDate = editForm.startDate;
+      payload.notes = editForm.notes;
+
+      await dealsService.update(deal.id, payload);
+      setEditOpen(false);
+      toast.success('Cerere actualizata!');
+      fetchDeal();
+      setMatchesLoaded(false); // re-trigger matches
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string | string[] } } })
+          ?.response?.data?.message || 'Eroare la salvare.';
+      setEditError(Array.isArray(message) ? message.join(', ') : message);
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const editFilteredPersons = editForm.companyId
+    ? editPersons.filter((p) => p.companyId === Number(editForm.companyId))
+    : editPersons;
 
   // ----- Handlers -----
 
@@ -412,6 +502,14 @@ export default function DealDetailPage() {
               </span>
             )}
           </div>
+          {/* Edit deal button */}
+          <button
+            onClick={() => setEditOpen(true)}
+            className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 active:bg-slate-100"
+            title="Editeaza cererea"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
           {/* Reassign button (admin only) */}
           {isAdmin && (
             <button
@@ -938,6 +1036,184 @@ export default function DealDetailPage() {
             <button onClick={handleReassign} disabled={reassignSubmitting || !reassignUserId} className="btn-primary">
               {reassignSubmitting && <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               <span>{reassignSubmitting ? 'Se salveaza...' : 'Reasigneaza'}</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── EDIT DEAL MODAL ── */}
+      <Modal
+        isOpen={editOpen}
+        onClose={() => setEditOpen(false)}
+        title="Editeaza cererea"
+      >
+        <div className="space-y-4">
+          {editError && (
+            <div className="rounded-lg bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">
+              {editError}
+            </div>
+          )}
+
+          {/* Name */}
+          <div>
+            <label htmlFor="edit-name" className="label">Nume deal</label>
+            <input
+              id="edit-name"
+              type="text"
+              value={editForm.name}
+              onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+              className="input"
+            />
+          </div>
+
+          {/* Request type toggle */}
+          <div className="flex items-center gap-3">
+            <label className="label mb-0 text-slate-500">Tip:</label>
+            <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+              <button
+                type="button"
+                onClick={() => setEditForm((f) => ({ ...f, requestType: 'RENT' }))}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  editForm.requestType === 'RENT'
+                    ? 'bg-white text-slate-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Inchiriere
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditForm((f) => ({ ...f, requestType: 'SALE' }))}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  editForm.requestType === 'SALE'
+                    ? 'bg-white text-slate-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                Achizitie
+              </button>
+            </div>
+          </div>
+
+          {/* Company */}
+          <div>
+            <label htmlFor="edit-company" className="label">
+              Client <span className="text-red-400">*</span>
+            </label>
+            <select
+              id="edit-company"
+              value={editForm.companyId}
+              onChange={(e) => setEditForm((f) => ({ ...f, companyId: e.target.value, personId: '' }))}
+              className="input"
+            >
+              <option value="">-- Selecteaza --</option>
+              {editCompanies.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Person */}
+          <div>
+            <label htmlFor="edit-person" className="label">
+              Persoana contact <span className="text-red-400">*</span>
+            </label>
+            <select
+              id="edit-person"
+              value={editForm.personId}
+              onChange={(e) => setEditForm((f) => ({ ...f, personId: e.target.value }))}
+              className="input"
+            >
+              <option value="">-- Selecteaza --</option>
+              {editFilteredPersons.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Criteria */}
+          <div className="border-t border-slate-100 pt-4">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Criterii</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="edit-sqm" className="label">Suprafata (mp)</label>
+                <input
+                  id="edit-sqm"
+                  type="number"
+                  value={editForm.numberOfSqm}
+                  onChange={(e) => setEditForm((f) => ({ ...f, numberOfSqm: e.target.value }))}
+                  className="input"
+                  min={0}
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-height" className="label">Inaltime min. (m)</label>
+                <input
+                  id="edit-height"
+                  type="number"
+                  value={editForm.minHeight}
+                  onChange={(e) => setEditForm((f) => ({ ...f, minHeight: e.target.value }))}
+                  className="input"
+                  min={0}
+                  step="0.1"
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-fee" className="label">Fee estimat (EUR)</label>
+                <input
+                  id="edit-fee"
+                  type="number"
+                  value={editForm.estimatedFeeValue}
+                  onChange={(e) => setEditForm((f) => ({ ...f, estimatedFeeValue: e.target.value }))}
+                  className="input"
+                  min={0}
+                />
+              </div>
+              <div>
+                <label htmlFor="edit-contract" className="label">Perioada contract (luni)</label>
+                <input
+                  id="edit-contract"
+                  type="number"
+                  value={editForm.contractPeriod}
+                  onChange={(e) => setEditForm((f) => ({ ...f, contractPeriod: e.target.value }))}
+                  className="input"
+                  min={0}
+                />
+              </div>
+            </div>
+            <div className="mt-4">
+              <label htmlFor="edit-start" className="label">Data start</label>
+              <input
+                id="edit-start"
+                type="date"
+                value={editForm.startDate}
+                onChange={(e) => setEditForm((f) => ({ ...f, startDate: e.target.value }))}
+                className="input"
+              />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label htmlFor="edit-notes" className="label">Notite</label>
+            <textarea
+              id="edit-notes"
+              value={editForm.notes}
+              onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+              className="input"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button onClick={() => setEditOpen(false)} className="btn-secondary">
+              Anuleaza
+            </button>
+            <button onClick={handleEditSubmit} disabled={editSubmitting} className="btn-primary">
+              {editSubmitting && (
+                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              )}
+              <span>{editSubmitting ? 'Se salveaza...' : 'Salveaza'}</span>
             </button>
           </div>
         </div>

@@ -171,18 +171,28 @@ export default function RequestFormModal({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!companyId) {
+      setError('Selecteaza un client.');
+      return;
+    }
+    if (!personId) {
+      setError('Selecteaza o persoana de contact.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       const payload: Record<string, unknown> = {
         name: generateName(),
         requestType,
+        companyId: Number(companyId),
+        personId: Number(personId),
       };
 
       if (numberOfSqm) payload.numberOfSqm = Number(numberOfSqm);
       if (minHeight) payload.minHeight = Number(minHeight);
-      if (companyId) payload.companyId = Number(companyId);
-      if (personId) payload.personId = Number(personId);
       if (locationMode === 'list' && selectedLocationIds.length > 0) {
         payload.locationIds = selectedLocationIds;
       }
@@ -257,7 +267,7 @@ export default function RequestFormModal({
         <div>
           <div className="flex items-center justify-between mb-1">
             <label htmlFor="req-company" className="label mb-0">
-              Client
+              Client <span className="text-red-400">*</span>
             </label>
             <button
               type="button"
@@ -310,7 +320,7 @@ export default function RequestFormModal({
         <div>
           <div className="flex items-center justify-between mb-1">
             <label htmlFor="req-person" className="label mb-0">
-              Persoana contact
+              Persoana contact <span className="text-red-400">*</span>
             </label>
             <button
               type="button"

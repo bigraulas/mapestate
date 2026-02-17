@@ -2,7 +2,7 @@ import {
   RequestStatus,
   REQUEST_STATUS_LABELS,
   REQUEST_STATUS_COLORS,
-} from '@dunwell/shared';
+} from '@mapestate/shared';
 
 interface StatusBadgeProps {
   status: RequestStatus;

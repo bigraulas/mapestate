@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 /**
- * Seeds realistic demo data for broker@dunwell.ro:
+ * Seeds realistic demo data for broker@mapestate.eu:
  * - 1 company (Maspex Romania)
  * - 1 contact person
  * - 4 buildings in Bucharest/Ilfov area with real coordinates
@@ -11,11 +11,11 @@ const prisma = new PrismaClient();
  * - 1 property request (deal) linked to the company
  */
 async function main() {
-  console.log('Seeding demo data for broker@dunwell.ro...');
+  console.log('Seeding demo data for broker@mapestate.eu...');
 
   // Get broker user
   const broker = await prisma.user.findUnique({
-    where: { email: 'broker@dunwell.ro' },
+    where: { email: 'broker@mapestate.eu' },
   });
   if (!broker) {
     throw new Error('Broker user not found. Run main seed first.');
@@ -479,7 +479,7 @@ async function main() {
   console.log(`  Person: ${person.name} (ID: ${person.id})`);
   console.log(`  Buildings: ${building1.name}, ${building2.name}, ${building3.name}, ${building4.name}`);
   console.log(`  Deal: ${deal.name} (ID: ${deal.id})`);
-  console.log('\nLogheaza-te cu broker@dunwell.ro / password si deschide deal-ul din /deals');
+  console.log('\nLogheaza-te cu broker@mapestate.eu / password si deschide deal-ul din /deals');
 }
 
 main()

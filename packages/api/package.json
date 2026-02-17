@@ -1,8 +1,8 @@
 {
-  "name": "@dunwell/api",
+  "name": "@mapestate/api",
   "version": "0.1.0",
   "private": true,
-  "description": "Dunwell CRM - NestJS API",
+  "description": "MapEstate CRM - NestJS API",
   "license": "UNLICENSED",
   "scripts": {
     "dev": "nest start --watch",

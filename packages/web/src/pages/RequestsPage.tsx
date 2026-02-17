@@ -11,7 +11,7 @@ import {
   RequestStatus,
   REQUEST_STATUS_LABELS,
   REQUEST_STATUS_COLORS,
-} from '@dunwell/shared';
+} from '@mapestate/shared';
 import { requestsService } from '@/services/requests.service';
 import DataTable, { type Column } from '@/components/shared/DataTable';
 import Pagination from '@/components/shared/Pagination';

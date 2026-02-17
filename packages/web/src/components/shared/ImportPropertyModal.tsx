@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, type FormEvent } from 'react';
 import { X, Save, Loader2, Search, MapPin } from 'lucide-react';
-import type { Location } from '@dunwell/shared';
-import { TransactionType } from '@dunwell/shared';
+import type { Location } from '@mapestate/shared';
+import { TransactionType } from '@mapestate/shared';
 import type { DiscoveredMarker } from '@/components/map/MapboxMap';
 import { discoverService, locationsService } from '@/services';
 

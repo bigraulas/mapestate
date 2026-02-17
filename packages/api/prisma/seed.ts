@@ -8,28 +8,28 @@ async function main() {
 
   const hashedPassword = await bcrypt.hash('password', 10);
 
-  // Create default agency (replaces AgencySettings)
+  // Create default agency
   const agency = await prisma.agency.upsert({
     where: { id: 1 },
     update: {},
     create: {
       id: 1,
-      name: 'Dunwell',
+      name: 'MapEstate',
       address: '218 Calea Floreasca, District 1, Bucharest, Romania',
       phone: '+40 (0) 723 456 789',
-      email: 'office@dunwell.ro',
-      website: 'www.dunwell.ro',
-      primaryColor: '#0d9488',
+      email: 'office@mapestate.eu',
+      website: 'www.mapestate.eu',
+      primaryColor: '#2563EB',
     },
   });
   console.log(`Created agency: ${agency.name}`);
 
   // Create platform admin (no agency)
   const platformAdmin = await prisma.user.upsert({
-    where: { email: 'platform@dunwell.ro' },
+    where: { email: 'platform@mapestate.eu' },
     update: {},
     create: {
-      email: 'platform@dunwell.ro',
+      email: 'platform@mapestate.eu',
       password: hashedPassword,
       firstName: 'Platform',
       lastName: 'Admin',
@@ -40,15 +40,15 @@ async function main() {
   });
   console.log(`Created platform admin: ${platformAdmin.email}`);
 
-  // Create admin user (belongs to Dunwell agency)
+  // Create admin user (belongs to MapEstate agency)
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@dunwell.ro' },
+    where: { email: 'admin@mapestate.eu' },
     update: { agencyId: 1 },
     create: {
-      email: 'admin@dunwell.ro',
+      email: 'admin@mapestate.eu',
       password: hashedPassword,
       firstName: 'Admin',
-      lastName: 'Dunwell',
+      lastName: 'MapEstate',
       phone: '+40721000000',
       role: Role.ADMIN,
       agencyId: 1,
@@ -56,12 +56,12 @@ async function main() {
   });
   console.log(`Created admin user: ${admin.email}`);
 
-  // Create broker user (belongs to Dunwell agency)
+  // Create broker user (belongs to MapEstate agency)
   const broker = await prisma.user.upsert({
-    where: { email: 'broker@dunwell.ro' },
+    where: { email: 'broker@mapestate.eu' },
     update: { agencyId: 1 },
     create: {
-      email: 'broker@dunwell.ro',
+      email: 'broker@mapestate.eu',
       password: hashedPassword,
       firstName: 'Ion',
       lastName: 'Popescu',

@@ -113,7 +113,7 @@ importers:
 
   packages/web:
     dependencies:
-      '@dunwell/shared':
+      '@mapestate/shared':
         specifier: workspace:*
         version: link:../shared
       '@radix-ui/react-avatar':

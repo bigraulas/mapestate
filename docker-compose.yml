@@ -6,12 +6,12 @@ services:
     ports:
       - "5436:5432"
     environment:
-      POSTGRES_USER: dunwell
-      POSTGRES_PASSWORD: dunwell_pass
-      POSTGRES_DB: dunwell_db
+      POSTGRES_USER: mapestate
+      POSTGRES_PASSWORD: mapestate_pass
+      POSTGRES_DB: mapestate_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
 volumes:
   postgres_data:
-  dunwell_uploads:
+  mapestate_uploads:

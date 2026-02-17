@@ -18,8 +18,8 @@ import {
   Image,
   UserPlus,
 } from 'lucide-react';
-import type { Building, Unit } from '@dunwell/shared';
-import { TransactionType } from '@dunwell/shared';
+import type { Building, Unit } from '@mapestate/shared';
+import { TransactionType } from '@mapestate/shared';
 import { buildingsService, unitsService } from '@/services';
 import { usersService } from '@/services/users.service';
 import { MapboxMap } from '@/components/map';

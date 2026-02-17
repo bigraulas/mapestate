@@ -13,7 +13,7 @@ import {
   Clock,
   AlertTriangle,
 } from 'lucide-react';
-import { ActivityType, ACTIVITY_TYPE_LABELS } from '@dunwell/shared';
+import { ActivityType, ACTIVITY_TYPE_LABELS } from '@mapestate/shared';
 import { activitiesService } from '@/services/activities.service';
 import { companiesService } from '@/services/companies.service';
 import { requestsService } from '@/services/requests.service';
