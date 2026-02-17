@@ -16,12 +16,17 @@ import {
   Dock,
   ArrowRight,
   Image,
+  UserPlus,
 } from 'lucide-react';
 import type { Building, Unit } from '@dunwell/shared';
 import { TransactionType } from '@dunwell/shared';
 import { buildingsService, unitsService } from '@/services';
+import { usersService } from '@/services/users.service';
 import { MapboxMap } from '@/components/map';
 import UnitFormPanel from '@/components/units/UnitFormPanel';
+import { useAuth } from '@/hooks/useAuth';
+import Modal from '@/components/shared/Modal';
+import toast from 'react-hot-toast';
 
 export default function BuildingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +37,12 @@ export default function BuildingDetailPage() {
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [showUnitForm, setShowUnitForm] = useState(false);
   const [expandedUnit, setExpandedUnit] = useState<number | null>(null);
+
+  const { isAdmin } = useAuth();
+  const [reassignOpen, setReassignOpen] = useState(false);
+  const [reassignUserId, setReassignUserId] = useState<number | ''>('');
+  const [reassignSubmitting, setReassignSubmitting] = useState(false);
+  const [brokersList, setBrokersList] = useState<{id: number; firstName: string; lastName: string}[]>([]);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -53,6 +64,32 @@ export default function BuildingDetailPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (!reassignOpen || brokersList.length > 0) return;
+    const fetchBrokers = async () => {
+      try {
+        const res = await usersService.getAll(1, 100);
+        setBrokersList(res.data.data ?? []);
+      } catch {}
+    };
+    fetchBrokers();
+  }, [reassignOpen, brokersList.length]);
+
+  const handleReassign = async () => {
+    if (!building || !reassignUserId) return;
+    setReassignSubmitting(true);
+    try {
+      await buildingsService.reassign(building.id, Number(reassignUserId));
+      setReassignOpen(false);
+      toast.success('Proprietate reasignata cu succes!');
+      fetchData();
+    } catch {
+      toast.error('Eroare la reasignare.');
+    } finally {
+      setReassignSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -106,13 +143,24 @@ export default function BuildingDetailPage() {
             </div>
           </div>
         </div>
-        <button
-          onClick={() => navigate(`/proprietati/${id}/edit`)}
-          className="btn-secondary"
-        >
-          <Edit3 className="w-4 h-4" />
-          <span>Editeaza</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button
+              onClick={() => { setReassignUserId(''); setReassignOpen(true); }}
+              className="btn-secondary"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Reasigneaza</span>
+            </button>
+          )}
+          <button
+            onClick={() => navigate(`/proprietati/${id}/edit`)}
+            className="btn-secondary"
+          >
+            <Edit3 className="w-4 h-4" />
+            <span>Editeaza</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -237,6 +285,15 @@ export default function BuildingDetailPage() {
                           <div>
                             <p className="text-sm font-medium text-slate-900">{unit.name}</p>
                             <div className="flex items-center gap-3 mt-0.5">
+                              <span
+                                className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                                  unit.transactionType === TransactionType.SALE
+                                    ? 'bg-emerald-50 text-emerald-600'
+                                    : 'bg-blue-50 text-blue-600'
+                                }`}
+                              >
+                                {unit.transactionType === TransactionType.SALE ? 'Vanzare' : 'Inchiriere'}
+                              </span>
                               {unit.usefulHeight != null && (
                                 <span className="text-xs text-slate-400">H: {unit.usefulHeight}m</span>
                               )}
@@ -307,6 +364,15 @@ export default function BuildingDetailPage() {
                             <div>
                               <span className="text-slate-400">Mentenanta:</span>{' '}
                               <span className="text-slate-700">{unit.maintenancePrice} EUR/mp/luna</span>
+                            </div>
+                          )}
+                          {unit.salePrice != null && (
+                            <div>
+                              <span className="text-slate-400">Pret achizitie:</span>{' '}
+                              <span className="text-slate-700">
+                                {unit.salePrice.toLocaleString('ro-RO')} EUR
+                                {unit.salePriceVatIncluded ? ' (incl. TVA)' : ' + TVA'}
+                              </span>
                             </div>
                           )}
                           {unit.docks != null && (
@@ -437,6 +503,42 @@ export default function BuildingDetailPage() {
             fetchData();
           }}
         />
+      )}
+
+      {/* Reassign Modal - admin only */}
+      {isAdmin && (
+        <Modal
+          isOpen={reassignOpen}
+          onClose={() => setReassignOpen(false)}
+          title="Reasigneaza proprietatea"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Selecteaza broker-ul caruia doresti sa ii atribuiti proprietatea <strong>{building?.name}</strong>.
+            </p>
+            <div>
+              <label htmlFor="reassign-broker" className="label">Broker nou</label>
+              <select
+                id="reassign-broker"
+                value={reassignUserId}
+                onChange={(e) => setReassignUserId(e.target.value ? Number(e.target.value) : '')}
+                className="input"
+              >
+                <option value="">Selecteaza un broker...</option>
+                {brokersList.map((b) => (
+                  <option key={b.id} value={b.id}>{b.firstName} {b.lastName}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button onClick={() => setReassignOpen(false)} className="btn-secondary">Anuleaza</button>
+              <button onClick={handleReassign} disabled={reassignSubmitting || !reassignUserId} className="btn-primary">
+                {reassignSubmitting && <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                <span>{reassignSubmitting ? 'Se salveaza...' : 'Reasigneaza'}</span>
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

@@ -12,4 +12,6 @@ export const buildingsService = {
   delete: (id: number) => api.delete(`/properties/buildings/${id}`),
   filter: (data: Record<string, unknown>) =>
     api.post('/properties/buildings/filter', data),
+  reassign: (id: number, userId: number) =>
+    api.patch(`/properties/buildings/${id}/reassign`, { userId }),
 };

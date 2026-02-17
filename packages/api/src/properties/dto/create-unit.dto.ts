@@ -6,12 +6,23 @@ import {
   IsBoolean,
   IsObject,
   IsArray,
+  IsDateString,
+  IsEnum,
 } from 'class-validator';
+
+enum TransactionType {
+  RENT = 'RENT',
+  SALE = 'SALE',
+}
 
 export class CreateUnitDto {
   @IsString()
   @IsNotEmpty()
   name!: string;
+
+  @IsEnum(TransactionType)
+  @IsOptional()
+  transactionType?: TransactionType;
 
   @IsNumber()
   @IsNotEmpty()
@@ -88,4 +99,71 @@ export class CreateUnitDto {
   @IsArray()
   @IsOptional()
   images?: string[];
+
+  // Technical specs
+  @IsString()
+  @IsOptional()
+  temperature?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  sprinkler?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  hydrantSystem?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  isuAuthorization?: boolean;
+
+  @IsString()
+  @IsOptional()
+  heating?: string;
+
+  @IsString()
+  @IsOptional()
+  buildingStructure?: string;
+
+  @IsString()
+  @IsOptional()
+  gridStructure?: string;
+
+  @IsString()
+  @IsOptional()
+  gridFormat?: string;
+
+  @IsNumber()
+  @IsOptional()
+  floorLoading?: number;
+
+  @IsString()
+  @IsOptional()
+  lighting?: string;
+
+  // Commercial specs
+  @IsNumber()
+  @IsOptional()
+  serviceCharge?: number;
+
+  @IsDateString()
+  @IsOptional()
+  availableFrom?: string;
+
+  @IsString()
+  @IsOptional()
+  contractLength?: string;
+
+  @IsString()
+  @IsOptional()
+  expandingPossibilities?: string;
+
+  // Sale price
+  @IsNumber()
+  @IsOptional()
+  salePrice?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  salePriceVatIncluded?: boolean;
 }

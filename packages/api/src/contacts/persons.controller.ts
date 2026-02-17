@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  Req,
   ParseIntPipe,
   UseGuards,
   DefaultValuePipe,
@@ -24,15 +25,16 @@ export class PersonsController {
 
   @Get()
   findAll(
+    @Req() req: any,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    return this.personsService.findAll(page, limit);
+    return this.personsService.findAll(page, limit, req.user.agencyId);
   }
 
   @Get('search')
-  search(@Query('q') query: string) {
-    return this.personsService.search(query || '');
+  search(@Req() req: any, @Query('q') query: string) {
+    return this.personsService.search(query || '', req.user.agencyId);
   }
 
   @Get(':id')

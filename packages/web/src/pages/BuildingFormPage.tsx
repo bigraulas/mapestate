@@ -225,7 +225,7 @@ export default function BuildingFormPage() {
   }
 
   return (
-    <div className="page-container max-w-2xl">
+    <div className="page-container max-w-4xl">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button

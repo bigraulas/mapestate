@@ -15,8 +15,14 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 enum Role {
+  PLATFORM_ADMIN
   ADMIN
   BROKER
+}
+
+enum AgencyStatus {
+  ACTIVE
+  SUSPENDED
 }
 
 enum DealType {
@@ -84,9 +90,11 @@ model User {
   phone     String?
   role      Role     @default(BROKER)
   avatar    String?
+  agencyId  Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  agency           Agency?   @relation(fields: [agencyId], references: [id])
   buildings        Building[]
   units            Unit[]
   companies        Company[]
@@ -94,7 +102,9 @@ model User {
   propertyRequests PropertyRequest[]
   offers           Offer[]
   activities       Activity[]
+  auditLogs        AuditLog[]
 
+  @@index([agencyId])
   @@map("users")
 }
 
@@ -131,6 +141,7 @@ model Building {
   hydrantSystem     Boolean         @default(false)
   isuAuthorization  Boolean         @default(false)
   temperature       String?
+  expandingPossibilities String?
   buildToSuit       Boolean         @default(false)
   polygonPoints     Json?
   serviceCharge     Float?
@@ -160,8 +171,9 @@ model Building {
 }
 
 model Unit {
-  id             Int      @id @default(autoincrement())
-  name           String
+  id              Int             @id @default(autoincrement())
+  name            String
+  transactionType TransactionType @default(RENT)
   warehouseSpace Json?
   officeSpace    Json?
   sanitarySpace  Json?
@@ -180,6 +192,27 @@ model Unit {
   photos            Json?
   crossDock      Boolean  @default(false)
   images         Json?
+
+  // Technical specs
+  temperature       String?
+  sprinkler         Boolean  @default(false)
+  hydrantSystem     Boolean  @default(false)
+  isuAuthorization  Boolean  @default(false)
+  heating           String?
+  buildingStructure String?
+  gridStructure     String?
+  gridFormat        String?
+  floorLoading      Float?
+  lighting          String?
+
+  // Commercial specs
+  serviceCharge     Float?
+  availableFrom     DateTime?
+  contractLength    String?
+  expandingPossibilities String?
+  salePrice         Float?           // fixed sale price (EUR) for SALE transactions
+  salePriceVatIncluded Boolean @default(false)  // true = price includes VAT
+
   buildingId     Int
   userId         Int
   createdAt      DateTime @default(now())
@@ -265,6 +298,7 @@ model PropertyRequest {
   id                Int            @id @default(autoincrement())
   name              String
   numberOfSqm       Int?
+  minHeight         Float?
   estimatedFeeValue Float?
   contractPeriod    Int?
   breakOptionAfter  Int?
@@ -276,6 +310,9 @@ model PropertyRequest {
   notes             String?        @db.Text
   closedAt          DateTime?
   lastStatusChange  DateTime?
+  searchLat         Float?
+  searchLng         Float?
+  searchRadius      Float?         // radius in km
   companyId         Int?
   personId          Int?
   userId            Int
@@ -426,4 +463,58 @@ model Tenant {
   @@index([unitId])
   @@index([companyId])
   @@map("tenants")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String   // CREATE, UPDATE, DELETE, STATUS_CHANGE, REASSIGN
+  entity    String   // DEAL, BUILDING, USER, SETTINGS
+  entityId  Int
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Agency {
+  id           Int          @id @default(autoincrement())
+  name         String
+  logo         String?
+  coverImage   String?
+  address      String?
+  phone        String?
+  email        String?
+  website      String?
+  primaryColor String       @default("#0d9488")
+  status       AgencyStatus @default(ACTIVE)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  users       User[]
+  invitations Invitation[]
+
+  @@map("agencies")
+}
+
+model Invitation {
+  id         Int       @id @default(autoincrement())
+  email      String
+  token      String    @unique
+  role       Role      @default(ADMIN)
+  firstName  String
+  lastName   String
+  agencyId   Int
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  agency Agency @relation(fields: [agencyId], references: [id])
+
+  @@index([agencyId])
+  @@map("invitations")
 }

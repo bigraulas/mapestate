@@ -1,6 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import ProtectedLayout from './components/layout/ProtectedLayout';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import PropertiesPage from './pages/PropertiesPage';
 import BuildingFormPage from './pages/BuildingFormPage';
@@ -11,11 +13,17 @@ import DealsPage from './pages/DealsPage';
 import DealDetailPage from './pages/DealDetailPage';
 import ActivitiesPage from './pages/ActivitiesPage';
 import UsersPage from './pages/UsersPage';
+import AuditLogPage from './pages/AuditLogPage';
+import SettingsPage from './pages/SettingsPage';
+import PlatformPage from './pages/PlatformPage';
 
 function App() {
   return (
+    <>
+    <Toaster position="top-center" toastOptions={{ duration: 3000, style: { fontSize: '14px' } }} />
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/inregistrare" element={<RegisterPage />} />
       <Route path="/*" element={<ProtectedLayout />}>
         <Route index element={<DashboardPage />} />
         <Route path="proprietati" element={<PropertiesPage />} />
@@ -28,8 +36,12 @@ function App() {
         <Route path="deals/:id" element={<DealDetailPage />} />
         <Route path="activitati" element={<ActivitiesPage />} />
         <Route path="utilizatori" element={<UsersPage />} />
+        <Route path="jurnal" element={<AuditLogPage />} />
+        <Route path="setari" element={<SettingsPage />} />
+        <Route path="platform" element={<PlatformPage />} />
       </Route>
     </Routes>
+    </>
   );
 }
 

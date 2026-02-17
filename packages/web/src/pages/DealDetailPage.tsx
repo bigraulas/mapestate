@@ -5,9 +5,20 @@ import {
   FileDown,
   RefreshCw,
   Building2,
-  FileText,
   Calendar,
   ChevronDown,
+  Eye,
+  Mail,
+  MessageCircle,
+  MapPin,
+  Ruler,
+  Clock,
+  Truck,
+  Check,
+  X,
+  ChevronUp,
+  FileText,
+  UserPlus,
 } from 'lucide-react';
 import {
   RequestStatus,
@@ -23,9 +34,12 @@ import type {
   ActivityType,
 } from '@dunwell/shared';
 import { dealsService } from '@/services/deals.service';
+import { usersService } from '@/services/users.service';
+import { useAuth } from '@/hooks/useAuth';
 import StatusBadge from '@/components/shared/StatusBadge';
 import Modal from '@/components/shared/Modal';
 import api from '@/services/api';
+import toast from 'react-hot-toast';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,13 +50,22 @@ interface MatchResult {
   building: {
     id: number;
     name: string;
+    address?: string | null;
     availableSqm?: number | null;
     serviceCharge?: number | null;
+    clearHeight?: number | null;
+    availableFrom?: string | null;
     location?: { id: number; name: string } | null;
+    unitsCount?: number;
+    totalDocks?: number;
+  };
+  breakdown?: {
+    sqm: number;
+    location: number;
+    height: number;
+    availability: number;
   };
 }
-
-type TabKey = 'detalii' | 'proprietati' | 'activitati';
 
 const ALL_STATUSES: RequestStatus[] = [
   RequestStatus.NEW,
@@ -72,19 +95,23 @@ export default function DealDetailPage() {
   // Core state
   const [deal, setDeal] = useState<PropertyRequest | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabKey>('detalii');
 
-  // Matching state (Proprietati tab)
+  // Matching state
   const [matches, setMatches] = useState<MatchResult[]>([]);
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [matchesLoaded, setMatchesLoaded] = useState(false);
   const [selectedBuildingIds, setSelectedBuildingIds] = useState<number[]>([]);
   const [sending, setSending] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
-  // Activities state
+  // Activities
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [activitiesLoading, setActivitiesLoading] = useState(false);
   const [activitiesLoaded, setActivitiesLoaded] = useState(false);
+
+  // UI state
+  const [showDetails, setShowDetails] = useState(false);
+  const [showActivities, setShowActivities] = useState(false);
+  const [showSentOffers, setShowSentOffers] = useState(false);
 
   // Status change modal
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
@@ -92,9 +119,14 @@ export default function DealDetailPage() {
   const [lostReason, setLostReason] = useState('');
   const [statusSubmitting, setStatusSubmitting] = useState(false);
   const [statusError, setStatusError] = useState('');
-
-  // Status dropdown
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+
+  // Admin reassignment
+  const { isAdmin } = useAuth();
+  const [reassignOpen, setReassignOpen] = useState(false);
+  const [reassignUserId, setReassignUserId] = useState<number | ''>('');
+  const [reassignSubmitting, setReassignSubmitting] = useState(false);
+  const [brokersList, setBrokersList] = useState<{id: number; firstName: string; lastName: string}[]>([]);
 
   // ----- Data fetching -----
 
@@ -127,17 +159,13 @@ export default function DealDetailPage() {
 
   const fetchActivities = useCallback(async () => {
     if (!id) return;
-    setActivitiesLoading(true);
     try {
-      const res = await api.get('/activities', {
-        params: { requestId: id },
-      });
+      const res = await api.get('/activities', { params: { requestId: id } });
       const body = res.data;
       setActivities(Array.isArray(body) ? body : body.data ?? []);
     } catch {
       setActivities([]);
     } finally {
-      setActivitiesLoading(false);
       setActivitiesLoaded(true);
     }
   }, [id]);
@@ -146,15 +174,31 @@ export default function DealDetailPage() {
     fetchDeal();
   }, [fetchDeal]);
 
-  // Lazy-load tab data
+  // Auto-load matches for REQUEST deals
   useEffect(() => {
-    if (activeTab === 'proprietati' && !matchesLoaded && deal?.dealType === DealType.REQUEST) {
+    if (deal && deal.dealType === DealType.REQUEST && !matchesLoaded) {
       fetchMatches();
     }
-    if (activeTab === 'activitati' && !activitiesLoaded) {
+  }, [deal, matchesLoaded, fetchMatches]);
+
+  // Lazy-load activities on expand
+  useEffect(() => {
+    if (showActivities && !activitiesLoaded) {
       fetchActivities();
     }
-  }, [activeTab, matchesLoaded, activitiesLoaded, deal?.dealType, fetchMatches, fetchActivities]);
+  }, [showActivities, activitiesLoaded, fetchActivities]);
+
+  // Fetch brokers when reassign modal opens
+  useEffect(() => {
+    if (!reassignOpen || brokersList.length > 0) return;
+    const fetchBrokers = async () => {
+      try {
+        const res = await usersService.getAll(1, 100);
+        setBrokersList(res.data.data ?? []);
+      } catch {}
+    };
+    fetchBrokers();
+  }, [reassignOpen, brokersList.length]);
 
   // ----- Handlers -----
 
@@ -166,6 +210,14 @@ export default function DealDetailPage() {
     );
   };
 
+  const selectAll = () => {
+    setSelectedBuildingIds(matches.map((m) => m.building.id));
+  };
+
+  const deselectAll = () => {
+    setSelectedBuildingIds([]);
+  };
+
   const handleSendOffers = async () => {
     if (!id || selectedBuildingIds.length === 0) return;
     setSending(true);
@@ -174,19 +226,25 @@ export default function DealDetailPage() {
         dealId: Number(id),
         buildingIds: selectedBuildingIds,
       });
+      toast.success('Email trimis cu succes!');
       setSelectedBuildingIds([]);
-      // Refresh deal to get updated offers
       await fetchDeal();
     } catch {
-      // silently fail
+      toast.error('Eroare la trimiterea email-ului.');
     } finally {
       setSending(false);
     }
   };
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadSelectedPdf = async () => {
+    if (!id || selectedBuildingIds.length === 0) return;
+    setPdfLoading(true);
+    toast('Se genereaza PDF-ul...', { icon: '📄' });
     try {
-      const res = await dealsService.downloadPdf(Number(id));
+      const res = await dealsService.downloadPdfForBuildings(
+        Number(id),
+        selectedBuildingIds,
+      );
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -194,20 +252,71 @@ export default function DealDetailPage() {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      toast.success('PDF descarcat!');
     } catch {
-      // silently fail
+      toast.error('Eroare la generarea PDF-ului.');
+    } finally {
+      setPdfLoading(false);
     }
   };
 
-  // ----- Status change -----
+  const handlePreviewPdf = async () => {
+    if (!id || selectedBuildingIds.length === 0) return;
+    setPdfLoading(true);
+    toast('Se genereaza preview...', { icon: '👁️' });
+    try {
+      const res = await dealsService.downloadPdfForBuildings(
+        Number(id),
+        selectedBuildingIds,
+      );
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch {
+      toast.error('Eroare la generarea PDF-ului.');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
-  const openStatusDialog = () => {
-    if (!deal) return;
-    setNewStatus(deal.status);
-    setLostReason('');
-    setStatusError('');
-    setStatusDialogOpen(true);
-    setStatusDropdownOpen(false);
+  const handleSendWhatsApp = async () => {
+    if (!id || selectedBuildingIds.length === 0) return;
+    setPdfLoading(true);
+    toast('Se pregateste link-ul PDF...', { icon: '💬' });
+    try {
+      const res = await dealsService.createPdfLink(Number(id), selectedBuildingIds);
+      const token = res.data.token;
+      const pdfUrl = `${window.location.origin}/api/offers/pdf/shared/${token}`;
+
+      const phones = (deal?.person as any)?.phones;
+      const phone = Array.isArray(phones) && phones.length > 0 ? phones[0] : '';
+      const cleanPhone = phone.replace(/[^0-9+]/g, '').replace(/^\+/, '');
+
+      const message = encodeURIComponent(
+        `Buna ziua, va trimit oferta pentru ${deal?.name || 'proprietati'}.\n\nPuteti descarca prezentarea aici:\n${pdfUrl}`,
+      );
+
+      window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+    } catch {
+      toast.error('Eroare la generarea link-ului.');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handleReassign = async () => {
+    if (!deal || !reassignUserId) return;
+    setReassignSubmitting(true);
+    try {
+      await dealsService.reassign(deal.id, Number(reassignUserId));
+      setReassignOpen(false);
+      toast.success('Deal reasignat cu succes!');
+      fetchDeal();
+    } catch {
+      toast.error('Eroare la reasignare.');
+    } finally {
+      setReassignSubmitting(false);
+    }
   };
 
   const handleStatusSubmit = async () => {
@@ -216,16 +325,15 @@ export default function DealDetailPage() {
       setStatusError('Motivul pierderii este obligatoriu.');
       return;
     }
-
     setStatusSubmitting(true);
     setStatusError('');
-
     try {
       await dealsService.updateStatus(deal.id, {
         status: newStatus,
         lostReason: newStatus === RequestStatus.LOST ? lostReason : undefined,
       });
       setStatusDialogOpen(false);
+      toast.success('Status actualizat!');
       fetchDeal();
     } catch (err: unknown) {
       const message =
@@ -241,7 +349,7 @@ export default function DealDetailPage() {
 
   if (loading) {
     return (
-      <div className="page-container flex items-center justify-center py-24">
+      <div className="flex items-center justify-center py-24">
         <span className="inline-block w-6 h-6 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
         <span className="ml-2 text-sm text-slate-500">Se incarca...</span>
       </div>
@@ -250,333 +358,85 @@ export default function DealDetailPage() {
 
   if (!deal) {
     return (
-      <div className="page-container">
+      <div className="p-4">
         <button
           onClick={() => navigate('/deals')}
           className="inline-flex items-center gap-1 text-sm text-primary-600 hover:underline mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Inapoi la deals
+          Inapoi
         </button>
         <p className="text-sm text-slate-500">Deal-ul nu a fost gasit.</p>
       </div>
     );
   }
 
-  // ----- Tab: Detalii -----
+  const isRequest = deal.dealType === DealType.REQUEST;
+  const selectedCount = selectedBuildingIds.length;
+  const allSelected = matches.length > 0 && selectedCount === matches.length;
 
-  const renderDetalii = () => {
-    const fields: { label: string; value: React.ReactNode }[] = [
-      { label: 'Nume', value: deal.name },
-      { label: 'Companie', value: deal.company?.name || '-' },
-      { label: 'Contact', value: deal.person?.name || '-' },
-      {
-        label: 'Suprafata (mp)',
-        value: deal.numberOfSqm != null ? `${deal.numberOfSqm.toLocaleString('ro-RO')} mp` : '-',
-      },
-      {
-        label: 'Fee Estimat (EUR)',
-        value:
-          deal.estimatedFeeValue != null
-            ? `${deal.estimatedFeeValue.toLocaleString('ro-RO')} \u20AC`
-            : '-',
-      },
-      {
-        label: 'Tip Tranzactie',
-        value: deal.requestType ? TYPE_LABELS[deal.requestType] ?? deal.requestType : '-',
-      },
-      {
-        label: 'Perioada Contract',
-        value: deal.contractPeriod != null ? `${deal.contractPeriod} luni` : '-',
-      },
-      {
-        label: 'Data Start',
-        value: deal.startDate
-          ? new Date(deal.startDate).toLocaleDateString('ro-RO')
-          : '-',
-      },
-      {
-        label: 'Locatii',
-        value:
-          deal.locations && deal.locations.length > 0
-            ? deal.locations.map((l) => l.name).join(', ')
-            : '-',
-      },
-      { label: 'Notite', value: deal.notes || '-' },
-    ];
-
-    return (
-      <div className="card card-body">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-          {fields.map((f) => (
-            <div key={f.label}>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
-                {f.label}
-              </p>
-              <p className="text-sm text-slate-800">{f.value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+  // Score color helper
+  const getScoreStyle = (score: number) => {
+    if (score >= 70) return 'bg-emerald-500 text-white';
+    if (score >= 50) return 'bg-amber-500 text-white';
+    return 'bg-slate-400 text-white';
   };
 
-  // ----- Tab: Proprietati -----
-
-  const renderSentOffers = (offers: Offer[] | undefined) => (
-    <div className="mt-6">
-      <h3 className="text-sm font-semibold text-slate-700 mb-3">Oferte Trimise</h3>
-      {(!offers || offers.length === 0) && (
-        <p className="text-sm text-slate-400">Nicio oferta trimisa inca.</p>
-      )}
-      {offers?.map((offer) => (
-        <div key={offer.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg mb-2">
-          <span className="text-sm font-medium text-slate-700">{offer.offerCode}</span>
-          <span
-            className={`text-xs px-2 py-0.5 rounded ${
-              offer.emailStatus === 'SENT'
-                ? 'bg-emerald-100 text-emerald-700'
-                : offer.emailStatus === 'FAILED'
-                  ? 'bg-red-100 text-red-700'
-                  : 'bg-slate-100 text-slate-500'
-            }`}
-          >
-            {offer.emailStatus || 'PENDING'}
-          </span>
-          {offer.sentAt && (
-            <span className="text-xs text-slate-400">
-              {new Date(offer.sentAt).toLocaleDateString('ro-RO')}
-            </span>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-
-  const renderProprietati = () => {
-    const isRequest = deal.dealType === DealType.REQUEST;
-
-    return (
-      <div>
-        {/* Smart matching for REQUEST deals */}
-        {isRequest && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-700">
-                Proprietati Potrivite
-              </h3>
-              <button
-                onClick={() => {
-                  setMatchesLoaded(false);
-                  fetchMatches();
-                }}
-                disabled={matchesLoading}
-                className="btn-secondary !py-1.5 !px-3 !text-xs"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${matchesLoading ? 'animate-spin' : ''}`} />
-                <span>Recalculeaza</span>
-              </button>
-            </div>
-
-            {matchesLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <span className="inline-block w-5 h-5 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-                <span className="ml-2 text-sm text-slate-500">Se calculeaza potrivirile...</span>
-              </div>
-            ) : matches.length === 0 ? (
-              <div className="text-center py-8">
-                <Building2 className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-sm text-slate-400">
-                  Nu s-au gasit proprietati potrivite.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {matches.map((match) => (
-                  <div
-                    key={match.building.id}
-                    className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedBuildingIds.includes(match.building.id)}
-                      onChange={() => toggleBuilding(match.building.id)}
-                      className="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800">
-                        {match.building.name}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {match.building.location?.name || '-'} |{' '}
-                        {match.building.availableSqm || '-'} mp
-                        {match.building.serviceCharge
-                          ? ` | ${match.building.serviceCharge} EUR/mp`
-                          : ''}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-lg font-bold text-primary-600">
-                        {match.score}%
-                      </span>
-                      <span className="text-[10px] text-slate-400 block">match</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Send offers bar */}
-            {selectedBuildingIds.length > 0 && (
-              <div className="mt-4 flex items-center justify-between bg-primary-50 border border-primary-200 rounded-lg p-4">
-                <span className="text-sm text-primary-700">
-                  {selectedBuildingIds.length} proprietati selectate
-                </span>
-                <button
-                  onClick={handleSendOffers}
-                  disabled={sending}
-                  className="btn-primary"
-                >
-                  {sending ? 'Se trimite...' : 'Trimite Oferta'}
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Sent offers section */}
-        {renderSentOffers(deal.offers)}
-      </div>
-    );
-  };
-
-  // ----- Tab: Activitati -----
-
-  const renderActivitati = () => {
-    if (activitiesLoading) {
-      return (
-        <div className="flex items-center justify-center py-8">
-          <span className="inline-block w-5 h-5 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-          <span className="ml-2 text-sm text-slate-500">Se incarca activitatile...</span>
-        </div>
-      );
-    }
-
-    if (activities.length === 0) {
-      return (
-        <div className="text-center py-8">
-          <Calendar className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-          <p className="text-sm text-slate-400">
-            Nicio activitate inregistrata pentru acest deal.
-          </p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-2">
-        {activities.map((act) => (
-          <div
-            key={act.id}
-            className="flex items-start gap-3 p-4 bg-white border border-slate-200 rounded-lg"
-          >
-            <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                act.done ? 'bg-emerald-50' : 'bg-slate-50'
-              }`}
-            >
-              <FileText
-                className={`w-4 h-4 ${act.done ? 'text-emerald-500' : 'text-slate-400'}`}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <p className="text-sm font-medium text-slate-800 truncate">
-                  {act.title}
-                </p>
-                <span className="badge text-xs bg-slate-100 text-slate-500 shrink-0">
-                  {ACTIVITY_TYPE_LABELS[act.activityType as ActivityType] ?? act.activityType}
-                </span>
-                {act.done && (
-                  <span className="badge text-xs bg-emerald-50 text-emerald-600 shrink-0">
-                    Finalizat
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-400">
-                {new Date(act.date).toLocaleDateString('ro-RO')}
-                {act.time ? ` la ${act.time}` : ''}
-                {act.duration ? ` - ${act.duration} min` : ''}
-              </p>
-              {act.notes && (
-                <p className="text-xs text-slate-500 mt-1 line-clamp-2">{act.notes}</p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  // ----- Main render -----
-
-  const dealTypeBadgeClass =
-    deal.dealType === DealType.COLD_SALES
-      ? 'bg-amber-50 text-amber-700 border-amber-200'
-      : 'bg-blue-50 text-blue-700 border-blue-200';
-
-  const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
-    { key: 'detalii', label: 'Detalii', icon: <FileText className="w-4 h-4" /> },
-    { key: 'proprietati', label: 'Proprietati', icon: <Building2 className="w-4 h-4" /> },
-    { key: 'activitati', label: 'Activitati', icon: <Calendar className="w-4 h-4" /> },
-  ];
+  // ----- Render -----
 
   return (
-    <div className="page-container">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="pb-32">
+      {/* ── HEADER ── compact, mobile-friendly */}
+      <div className="sticky top-0 z-20 bg-white border-b border-slate-200 px-4 py-3">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/deals')}
-            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-2 -ml-2 rounded-lg text-slate-400 hover:text-slate-600 active:bg-slate-100 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="page-title">{deal.name}</h1>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-semibold text-slate-900 truncate">
+                {deal.name}
+              </h1>
               <StatusBadge status={deal.status} />
-              <span
-                className={`badge text-xs border ${dealTypeBadgeClass}`}
-              >
-                {DEAL_TYPE_LABELS[deal.dealType] ?? deal.dealType}
-              </span>
             </div>
-            {deal.company && (
-              <p className="text-sm text-slate-500 mt-0.5">{deal.company.name}</p>
+            <p className="text-xs text-slate-500 truncate">
+              {deal.company?.name || '-'}
+              {deal.person ? ` · ${deal.person.name}` : ''}
+            </p>
+            {isAdmin && deal.user && (
+              <span className="text-xs text-primary-600">
+                Broker: {deal.user.firstName} {deal.user.lastName}
+              </span>
             )}
           </div>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex items-center gap-2">
-          {/* Status dropdown */}
+          {/* Reassign button (admin only) */}
+          {isAdmin && (
+            <button
+              onClick={() => { setReassignUserId(''); setReassignOpen(true); }}
+              className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 active:bg-slate-100"
+              title="Reasigneaza"
+            >
+              <UserPlus className="w-4 h-4" />
+            </button>
+          )}
+          {/* Status change button */}
           <div className="relative">
             <button
               onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
-              className="btn-secondary"
+              className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 active:bg-slate-100"
             >
-              <span>Schimba Status</span>
               <ChevronDown className="w-4 h-4" />
             </button>
             {statusDropdownOpen && (
               <>
-                {/* Backdrop to close dropdown */}
                 <div
                   className="fixed inset-0 z-10"
                   onClick={() => setStatusDropdownOpen(false)}
                 />
-                <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1">
+                <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1 max-h-72 overflow-y-auto">
                   {ALL_STATUSES.map((s) => (
                     <button
                       key={s}
@@ -587,7 +447,7 @@ export default function DealDetailPage() {
                         setStatusError('');
                         setStatusDialogOpen(true);
                       }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-50 transition-colors ${
+                      className={`w-full text-left px-4 py-2.5 text-sm active:bg-slate-100 transition-colors ${
                         s === deal.status
                           ? 'text-primary-600 font-medium bg-primary-50'
                           : 'text-slate-700'
@@ -600,42 +460,402 @@ export default function DealDetailPage() {
               </>
             )}
           </div>
-
-          <button onClick={handleDownloadPdf} className="btn-secondary">
-            <FileDown className="w-4 h-4" />
-            <span>Descarca PDF</span>
-          </button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 mb-6 bg-white rounded-lg border border-slate-200 p-1 w-fit">
-        {tabs.map((tab) => (
+      {/* ── CRITERIA BAR ── horizontal scroll, always visible */}
+      {isRequest && (
+        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 overflow-x-auto">
+          <div className="flex items-center gap-2 min-w-max">
+            {deal.numberOfSqm != null && (
+              <span className="inline-flex items-center gap-1 text-xs bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 font-medium text-slate-700">
+                <Ruler className="w-3 h-3 text-blue-500" />
+                {deal.numberOfSqm.toLocaleString('ro-RO')} mp
+              </span>
+            )}
+            {deal.locations && deal.locations.length > 0 && deal.locations.map((l) => (
+              <span key={l.id} className="inline-flex items-center gap-1 text-xs bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 font-medium text-slate-700">
+                <MapPin className="w-3 h-3 text-emerald-500" />
+                {l.name}
+              </span>
+            ))}
+            {(deal as any).searchRadius != null && (deal as any).searchRadius > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-200 font-medium text-blue-700">
+                <MapPin className="w-3 h-3" />
+                Raza {(deal as any).searchRadius} km
+              </span>
+            )}
+            {(deal as any).minHeight != null && (
+              <span className="inline-flex items-center gap-1 text-xs bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 font-medium text-slate-700">
+                <Building2 className="w-3 h-3 text-violet-500" />
+                min {(deal as any).minHeight}m
+              </span>
+            )}
+            {deal.startDate && (
+              <span className="inline-flex items-center gap-1 text-xs bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 font-medium text-slate-700">
+                <Clock className="w-3 h-3 text-teal-500" />
+                {new Date(deal.startDate).toLocaleDateString('ro-RO')}
+              </span>
+            )}
+            {deal.requestType && (
+              <span className="inline-flex items-center gap-1 text-xs bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-500">
+                {TYPE_LABELS[deal.requestType] ?? deal.requestType}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── MATCHES SECTION ── main content, auto-loaded */}
+      {isRequest && (
+        <div className="px-4 pt-4">
+          {/* Section header with select all */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-slate-700">
+                Proprietati potrivite
+              </h2>
+              {matchesLoaded && !matchesLoading && (
+                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {matches.length}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {matches.length > 0 && (
+                <button
+                  onClick={allSelected ? deselectAll : selectAll}
+                  className="text-xs text-primary-600 font-medium px-2 py-1 rounded hover:bg-primary-50 active:bg-primary-100 transition-colors"
+                >
+                  {allSelected ? 'Deselecteaza' : 'Selecteaza tot'}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setMatchesLoaded(false);
+                  fetchMatches();
+                }}
+                disabled={matchesLoading}
+                className="p-2 rounded-lg text-slate-400 hover:text-slate-600 active:bg-slate-100 transition-colors"
+              >
+                <RefreshCw className={`w-4 h-4 ${matchesLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Loading */}
+          {matchesLoading && (
+            <div className="flex items-center justify-center py-12">
+              <span className="inline-block w-5 h-5 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+              <span className="ml-2 text-sm text-slate-500">Se calculeaza...</span>
+            </div>
+          )}
+
+          {/* Empty */}
+          {!matchesLoading && matchesLoaded && matches.length === 0 && (
+            <div className="text-center py-12">
+              <Building2 className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+              <p className="text-sm text-slate-400">Nu s-au gasit proprietati potrivite.</p>
+            </div>
+          )}
+
+          {/* Match cards - tap entire card to toggle */}
+          {!matchesLoading && matches.length > 0 && (
+            <div className="space-y-2">
+              {matches.map((match) => {
+                const selected = selectedBuildingIds.includes(match.building.id);
+                return (
+                  <div
+                    key={match.building.id}
+                    onClick={() => toggleBuilding(match.building.id)}
+                    className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer active:scale-[0.98] ${
+                      selected
+                        ? 'border-primary-400 bg-primary-50/50'
+                        : 'border-slate-200 bg-white active:bg-slate-50'
+                    }`}
+                  >
+                    {/* Selection indicator */}
+                    <div
+                      className={`absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                        selected
+                          ? 'bg-primary-600'
+                          : 'border-2 border-slate-300'
+                      }`}
+                    >
+                      {selected && <Check className="w-3.5 h-3.5 text-white" />}
+                    </div>
+
+                    {/* Score + Name row */}
+                    <div className="flex items-start gap-2.5 pr-8">
+                      <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold ${getScoreStyle(match.score)}`}>
+                        {match.score}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 leading-tight">
+                          {match.building.name}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">
+                          {match.building.location?.name}
+                          {match.building.address ? ` · ${match.building.address}` : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Spec pills */}
+                    <div className="flex flex-wrap gap-1.5 mt-2.5 ml-[50px]">
+                      {match.building.availableSqm != null && (
+                        <span className="inline-flex items-center gap-1 text-[11px] bg-blue-50 text-blue-700 px-2 py-1 rounded-md font-medium">
+                          <Ruler className="w-3 h-3" />
+                          {match.building.availableSqm.toLocaleString('ro-RO')} mp
+                        </span>
+                      )}
+                      {match.building.clearHeight != null && (
+                        <span className="inline-flex items-center gap-1 text-[11px] bg-violet-50 text-violet-700 px-2 py-1 rounded-md font-medium">
+                          {match.building.clearHeight}m
+                        </span>
+                      )}
+                      {match.building.availableFrom && (
+                        <span className="inline-flex items-center gap-1 text-[11px] bg-teal-50 text-teal-700 px-2 py-1 rounded-md font-medium">
+                          <Clock className="w-3 h-3" />
+                          {new Date(match.building.availableFrom).toLocaleDateString('ro-RO')}
+                        </span>
+                      )}
+                      {(match.building.totalDocks ?? 0) > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-medium">
+                          <Truck className="w-3 h-3" />
+                          {match.building.totalDocks} docks
+                        </span>
+                      )}
+                      {match.building.serviceCharge != null && (
+                        <span className="inline-flex items-center gap-1 text-[11px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md">
+                          {match.building.serviceCharge} €/mp SC
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Mini breakdown bar */}
+                    {match.breakdown && (
+                      <div className="mt-2.5 ml-[50px] flex items-center gap-0.5 h-1.5 rounded-full overflow-hidden bg-slate-100">
+                        <div className="h-full bg-blue-400 rounded-l-full" style={{ width: `${match.breakdown.sqm * 0.4}%` }} title={`Suprafata: ${match.breakdown.sqm}`} />
+                        <div className="h-full bg-emerald-400" style={{ width: `${match.breakdown.location * 0.4}%` }} title={`Zona: ${match.breakdown.location}`} />
+                        <div className="h-full bg-violet-400 rounded-r-full" style={{ width: `${match.breakdown.height * 0.2}%` }} title={`Inaltime: ${match.breakdown.height}`} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── COLLAPSIBLE SECTIONS ── */}
+      <div className="px-4 mt-6 space-y-2">
+        {/* Sent Offers */}
+        {deal.offers && deal.offers.length > 0 && (
+          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+            <button
+              onClick={() => setShowSentOffers(!showSentOffers)}
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-slate-700 active:bg-slate-50"
+            >
+              <span className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-slate-400" />
+                Oferte trimise
+                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {deal.offers.length}
+                </span>
+              </span>
+              {showSentOffers ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            </button>
+            {showSentOffers && (
+              <div className="px-4 pb-3 space-y-2">
+                {deal.offers.map((offer: Offer) => (
+                  <div key={offer.id} className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-lg">
+                    <span className="text-xs font-mono text-slate-600">{offer.offerCode}</span>
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                        offer.emailStatus === 'SENT'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : offer.emailStatus === 'FAILED'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-slate-200 text-slate-500'
+                      }`}
+                    >
+                      {offer.emailStatus || 'PENDING'}
+                    </span>
+                    {offer.sentAt && (
+                      <span className="text-[10px] text-slate-400 ml-auto">
+                        {new Date(offer.sentAt).toLocaleDateString('ro-RO')}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Deal Details */}
+        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
           <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === tab.key
-                ? 'bg-primary-50 text-primary-700'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-            }`}
+            onClick={() => setShowDetails(!showDetails)}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-slate-700 active:bg-slate-50"
           >
-            {tab.icon}
-            {tab.label}
+            <span className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-slate-400" />
+              Detalii deal
+            </span>
+            {showDetails ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
           </button>
-        ))}
+          {showDetails && (
+            <div className="px-4 pb-4">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: 'Companie', value: deal.company?.name },
+                  { label: 'Contact', value: deal.person?.name },
+                  { label: 'Suprafata', value: deal.numberOfSqm ? `${deal.numberOfSqm.toLocaleString('ro-RO')} mp` : null },
+                  { label: 'Inaltime min.', value: (deal as any).minHeight ? `${(deal as any).minHeight}m` : null },
+                  { label: 'Fee estimat', value: deal.estimatedFeeValue ? `${deal.estimatedFeeValue.toLocaleString('ro-RO')} €` : null },
+                  { label: 'Tip', value: deal.requestType ? TYPE_LABELS[deal.requestType] ?? deal.requestType : null },
+                  { label: 'Contract', value: deal.contractPeriod ? `${deal.contractPeriod} luni` : null },
+                  { label: 'Data start', value: deal.startDate ? new Date(deal.startDate).toLocaleDateString('ro-RO') : null },
+                  { label: 'Locatii', value: deal.locations?.length ? deal.locations.map((l) => l.name).join(', ') : null },
+                  { label: 'Zona harta', value: (deal as any).searchRadius ? `Raza ${(deal as any).searchRadius} km` : null },
+                  { label: 'Tip deal', value: DEAL_TYPE_LABELS[deal.dealType] ?? deal.dealType },
+                ].filter(f => f.value).map((f) => (
+                  <div key={f.label}>
+                    <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{f.label}</p>
+                    <p className="text-sm text-slate-800 mt-0.5">{f.value}</p>
+                  </div>
+                ))}
+              </div>
+              {deal.notes && (
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mb-1">Notite</p>
+                  <p className="text-sm text-slate-600">{deal.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Activities */}
+        <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+          <button
+            onClick={() => setShowActivities(!showActivities)}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-slate-700 active:bg-slate-50"
+          >
+            <span className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-slate-400" />
+              Activitati
+              {activitiesLoaded && activities.length > 0 && (
+                <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {activities.length}
+                </span>
+              )}
+            </span>
+            {showActivities ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+          {showActivities && (
+            <div className="px-4 pb-3">
+              {!activitiesLoaded ? (
+                <div className="flex items-center justify-center py-6">
+                  <span className="inline-block w-4 h-4 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+                </div>
+              ) : activities.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-4">Nicio activitate.</p>
+              ) : (
+                <div className="space-y-2">
+                  {activities.map((act) => (
+                    <div key={act.id} className="flex items-start gap-2.5 p-2.5 bg-slate-50 rounded-lg">
+                      <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${act.done ? 'bg-emerald-100' : 'bg-slate-200'}`}>
+                        {act.done
+                          ? <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          : <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-slate-700 font-medium truncate">{act.title}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          {ACTIVITY_TYPE_LABELS[act.activityType as ActivityType] ?? act.activityType}
+                          {' · '}
+                          {new Date(act.date).toLocaleDateString('ro-RO')}
+                          {act.time ? ` ${act.time}` : ''}
+                        </p>
+                        {act.notes && (
+                          <p className="text-xs text-slate-500 mt-1 line-clamp-2">{act.notes}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Tab content */}
-      {activeTab === 'detalii' && renderDetalii()}
-      {activeTab === 'proprietati' && renderProprietati()}
-      {activeTab === 'activitati' && renderActivitati()}
+      {/* ── STICKY BOTTOM ACTION BAR ── always visible when selections exist */}
+      {selectedCount > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 shadow-lg safe-bottom">
+          <div className="px-4 py-3">
+            {/* Selection count + deselect */}
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-sm font-semibold text-slate-700">
+                {selectedCount} {selectedCount === 1 ? 'proprietate' : 'proprietati'}
+              </span>
+              <button
+                onClick={deselectAll}
+                className="text-xs text-slate-500 flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-100 active:bg-slate-200"
+              >
+                <X className="w-3 h-3" />
+                Anuleaza
+              </button>
+            </div>
+            {/* Action buttons - 2x2 grid on mobile, row on desktop */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                onClick={handlePreviewPdf}
+                disabled={pdfLoading}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50 transition-colors"
+              >
+                <Eye className="w-4 h-4" />
+                <span>Preview</span>
+              </button>
+              <button
+                onClick={handleDownloadSelectedPdf}
+                disabled={pdfLoading}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50 transition-colors"
+              >
+                <FileDown className="w-4 h-4" />
+                <span>PDF</span>
+              </button>
+              <button
+                onClick={handleSendWhatsApp}
+                disabled={pdfLoading}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-green-500 text-sm font-medium text-white active:bg-green-600 disabled:opacity-50 transition-colors"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>WhatsApp</span>
+              </button>
+              <button
+                onClick={handleSendOffers}
+                disabled={sending}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-primary-600 text-sm font-medium text-white active:bg-primary-700 disabled:opacity-50 transition-colors"
+              >
+                <Mail className="w-4 h-4" />
+                <span>{sending ? 'Se trimite...' : 'Email'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Status change dialog */}
+      {/* ── STATUS CHANGE MODAL ── */}
       <Modal
         isOpen={statusDialogOpen}
         onClose={() => setStatusDialogOpen(false)}
-        title="Schimba statusul deal-ului"
+        title="Schimba statusul"
       >
         <div className="space-y-4">
           {statusError && (
@@ -644,14 +864,8 @@ export default function DealDetailPage() {
             </div>
           )}
 
-          <p className="text-sm text-slate-600">
-            Deal: <strong>{deal.name}</strong>
-          </p>
-
           <div>
-            <label htmlFor="new-status" className="label">
-              Status nou
-            </label>
+            <label htmlFor="new-status" className="label">Status nou</label>
             <select
               id="new-status"
               value={newStatus}
@@ -668,39 +882,62 @@ export default function DealDetailPage() {
 
           {newStatus === RequestStatus.LOST && (
             <div>
-              <label htmlFor="lost-reason" className="label">
-                Motivul pierderii *
-              </label>
+              <label htmlFor="lost-reason" className="label">Motivul pierderii *</label>
               <textarea
                 id="lost-reason"
                 value={lostReason}
                 onChange={(e) => setLostReason(e.target.value)}
                 className="input"
                 rows={3}
-                placeholder="Descrie motivul pierderii deal-ului..."
+                placeholder="Descrie motivul..."
                 required
               />
             </div>
           )}
 
           <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setStatusDialogOpen(false)}
-              className="btn-secondary"
-            >
+            <button onClick={() => setStatusDialogOpen(false)} className="btn-secondary">
               Anuleaza
             </button>
-            <button
-              type="button"
-              onClick={handleStatusSubmit}
-              disabled={statusSubmitting}
-              className="btn-primary"
-            >
-              {statusSubmitting ? (
+            <button onClick={handleStatusSubmit} disabled={statusSubmitting} className="btn-primary">
+              {statusSubmitting && (
                 <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : null}
+              )}
               <span>{statusSubmitting ? 'Se salveaza...' : 'Salveaza'}</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── REASSIGN MODAL ── */}
+      <Modal
+        isOpen={reassignOpen}
+        onClose={() => setReassignOpen(false)}
+        title="Reasigneaza deal-ul"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Selecteaza broker-ul caruia doresti sa ii atribuiti deal-ul <strong>{deal?.name}</strong>.
+          </p>
+          <div>
+            <label htmlFor="reassign-broker" className="label">Broker nou</label>
+            <select
+              id="reassign-broker"
+              value={reassignUserId}
+              onChange={(e) => setReassignUserId(e.target.value ? Number(e.target.value) : '')}
+              className="input"
+            >
+              <option value="">Selecteaza un broker...</option>
+              {brokersList.map((b) => (
+                <option key={b.id} value={b.id}>{b.firstName} {b.lastName}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button onClick={() => setReassignOpen(false)} className="btn-secondary">Anuleaza</button>
+            <button onClick={handleReassign} disabled={reassignSubmitting || !reassignUserId} className="btn-primary">
+              {reassignSubmitting && <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              <span>{reassignSubmitting ? 'Se salveaza...' : 'Reasigneaza'}</span>
             </button>
           </div>
         </div>

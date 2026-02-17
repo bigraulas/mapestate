@@ -38,7 +38,7 @@
 
 @layer components {
   .page-container {
-    @apply p-6;
+    @apply p-4 sm:p-6;
   }
 
   .page-title {
@@ -96,6 +96,11 @@
   .badge-danger {
     @apply badge bg-red-50 text-red-700;
   }
+}
+
+/* Safe area for iOS bottom bar */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Scrollbar styling */

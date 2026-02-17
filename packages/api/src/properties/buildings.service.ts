@@ -1,18 +1,23 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateBuildingDto } from './dto/create-building.dto';
 import { UpdateBuildingDto } from './dto/update-building.dto';
 
 @Injectable()
 export class BuildingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async findAll(
     page: number = 1,
     limit: number = 20,
     locationId?: number,
     transactionType?: string,
+    agencyId?: number | null,
   ) {
     const skip = (page - 1) * limit;
 
@@ -24,6 +29,10 @@ export class BuildingsService {
 
     if (transactionType) {
       where.transactionType = transactionType as Prisma.EnumTransactionTypeFilter['equals'];
+    }
+
+    if (agencyId) {
+      where.user = { agencyId };
     }
 
     const [data, total] = await Promise.all([
@@ -64,11 +73,12 @@ export class BuildingsService {
     };
   }
 
-  async findForMap() {
+  async findForMap(agencyId?: number | null) {
     return this.prisma.building.findMany({
       where: {
         latitude: { not: null },
         longitude: { not: null },
+        ...(agencyId ? { user: { agencyId } } : {}),
       },
       select: {
         id: true,
@@ -208,8 +218,12 @@ export class BuildingsService {
     });
   }
 
-  async filter(filterDto: Record<string, unknown>) {
+  async filter(filterDto: Record<string, unknown>, agencyId?: number | null) {
     const where: Prisma.BuildingWhereInput = {};
+
+    if (agencyId) {
+      where.user = { agencyId };
+    }
 
     if (filterDto.locationId) {
       where.locationId = filterDto.locationId as number;
@@ -294,5 +308,36 @@ export class BuildingsService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async reassign(id: number, newUserId: number, adminUserId: number) {
+    const building = await this.findOne(id);
+    const oldUserId = building.userId;
+
+    // Update building and all its units
+    const [updated] = await Promise.all([
+      this.prisma.building.update({
+        where: { id },
+        data: { userId: newUserId },
+        include: {
+          location: true,
+          user: {
+            select: { id: true, firstName: true, lastName: true, email: true },
+          },
+          developer: { select: { id: true, name: true } },
+        },
+      }),
+      this.prisma.unit.updateMany({
+        where: { buildingId: id },
+        data: { userId: newUserId },
+      }),
+    ]);
+
+    await this.auditService.log('REASSIGN', 'BUILDING', id, adminUserId, {
+      fromUserId: oldUserId,
+      toUserId: newUserId,
+    });
+
+    return updated;
   }
 }

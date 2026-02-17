@@ -13,6 +13,7 @@ interface UnitFormPanelProps {
 
 interface UnitForm {
   name: string;
+  transactionType: 'RENT' | 'SALE';
   usefulHeight: string;
   hasOffice: boolean;
   officeSqm: string;
@@ -25,12 +26,31 @@ interface UnitForm {
   crossDock: boolean;
   floorPlan: string[];
   photos: string[];
+  // Technical specs
+  temperature: string;
+  sprinkler: boolean;
+  hydrantSystem: boolean;
+  isuAuthorization: boolean;
+  heating: string;
+  buildingStructure: string;
+  gridStructure: string;
+  gridFormat: string;
+  floorLoading: string;
+  lighting: string;
+  // Commercial specs
+  serviceCharge: string;
+  availableFrom: string;
+  contractLength: string;
+  expandingPossibilities: string;
+  salePrice: string;
+  salePriceVatIncluded: boolean;
 }
 
 function unitToForm(u?: Unit | null): UnitForm {
   if (!u) {
     return {
       name: '',
+      transactionType: 'RENT',
       usefulHeight: '',
       hasOffice: false,
       officeSqm: '',
@@ -43,10 +63,27 @@ function unitToForm(u?: Unit | null): UnitForm {
       crossDock: false,
       floorPlan: [],
       photos: [],
+      temperature: '',
+      sprinkler: false,
+      hydrantSystem: false,
+      isuAuthorization: false,
+      heating: '',
+      buildingStructure: '',
+      gridStructure: '',
+      gridFormat: '',
+      floorLoading: '',
+      lighting: '',
+      serviceCharge: '',
+      availableFrom: '',
+      contractLength: '',
+      expandingPossibilities: '',
+      salePrice: '',
+      salePriceVatIncluded: false,
     };
   }
   return {
     name: u.name,
+    transactionType: (u.transactionType as 'RENT' | 'SALE') || 'RENT',
     usefulHeight: u.usefulHeight?.toString() ?? '',
     hasOffice: u.hasOffice ?? false,
     officeSqm: u.officeSqm?.toString() ?? '',
@@ -59,6 +96,22 @@ function unitToForm(u?: Unit | null): UnitForm {
     crossDock: u.crossDock ?? false,
     floorPlan: u.floorPlan ? [u.floorPlan] : [],
     photos: Array.isArray(u.photos) ? (u.photos as string[]) : [],
+    temperature: u.temperature ?? '',
+    sprinkler: u.sprinkler ?? false,
+    hydrantSystem: u.hydrantSystem ?? false,
+    isuAuthorization: u.isuAuthorization ?? false,
+    heating: u.heating ?? '',
+    buildingStructure: u.buildingStructure ?? '',
+    gridStructure: u.gridStructure ?? '',
+    gridFormat: u.gridFormat ?? '',
+    floorLoading: u.floorLoading?.toString() ?? '',
+    lighting: u.lighting ?? '',
+    serviceCharge: u.serviceCharge?.toString() ?? '',
+    availableFrom: u.availableFrom ? u.availableFrom.split('T')[0] : '',
+    contractLength: u.contractLength ?? '',
+    expandingPossibilities: u.expandingPossibilities ?? '',
+    salePrice: u.salePrice?.toString() ?? '',
+    salePriceVatIncluded: u.salePriceVatIncluded ?? false,
   };
 }
 
@@ -69,6 +122,8 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const [showAccess, setShowAccess] = useState(false);
+  const [showTechnical, setShowTechnical] = useState(false);
+  const [showCommercial, setShowCommercial] = useState(false);
 
   useEffect(() => {
     setForm(unitToForm(unit));
@@ -77,9 +132,12 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
   const update = <K extends keyof UnitForm>(key: K, val: UnitForm[K]) =>
     setForm((p) => ({ ...p, [key]: val }));
 
+  const isSale = form.transactionType === 'SALE';
+
   const buildPayload = () => ({
     name: form.name,
     buildingId,
+    transactionType: form.transactionType,
     usefulHeight: form.usefulHeight ? parseFloat(form.usefulHeight) : undefined,
     hasOffice: form.hasOffice,
     officeSqm: form.officeSqm ? parseFloat(form.officeSqm) : undefined,
@@ -92,6 +150,24 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
     crossDock: form.crossDock,
     floorPlan: form.floorPlan[0] || undefined,
     photos: form.photos.length > 0 ? form.photos : undefined,
+    // Technical specs
+    temperature: form.temperature || undefined,
+    sprinkler: form.sprinkler,
+    hydrantSystem: form.hydrantSystem,
+    isuAuthorization: form.isuAuthorization,
+    heating: form.heating || undefined,
+    buildingStructure: form.buildingStructure || undefined,
+    gridStructure: form.gridStructure || undefined,
+    gridFormat: form.gridFormat || undefined,
+    floorLoading: form.floorLoading ? parseFloat(form.floorLoading) : undefined,
+    lighting: form.lighting || undefined,
+    // Commercial specs
+    serviceCharge: form.serviceCharge ? parseFloat(form.serviceCharge) : undefined,
+    availableFrom: form.availableFrom ? new Date(form.availableFrom).toISOString() : undefined,
+    contractLength: form.contractLength || undefined,
+    expandingPossibilities: form.expandingPossibilities || undefined,
+    salePrice: form.salePrice ? parseFloat(form.salePrice) : undefined,
+    salePriceVatIncluded: form.salePriceVatIncluded,
   });
 
   const handleSubmit = async (e: FormEvent) => {
@@ -170,6 +246,27 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
             </div>
           )}
 
+          {/* Transaction type toggle */}
+          <div>
+            <label className="label mb-1.5">Tip tranzactie</label>
+            <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
+              {(['RENT', 'SALE'] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => update('transactionType', t)}
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    form.transactionType === t
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {t === 'RENT' ? 'Inchiriere' : 'Vanzare'}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Name + Height */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -233,49 +330,82 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
           </div>
 
           {/* Prices */}
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-              Preturi (EUR/mp/luna)
-            </p>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="label">Hala</label>
-                <input
-                  type="number"
-                  value={form.warehousePrice}
-                  onChange={(e) => update('warehousePrice', e.target.value)}
-                  className="input"
-                  placeholder="0.00"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-              <div>
-                <label className="label">Birou</label>
-                <input
-                  type="number"
-                  value={form.officePrice}
-                  onChange={(e) => update('officePrice', e.target.value)}
-                  className="input"
-                  placeholder="0.00"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-              <div>
-                <label className="label">Mentenanta</label>
-                <input
-                  type="number"
-                  value={form.maintenancePrice}
-                  onChange={(e) => update('maintenancePrice', e.target.value)}
-                  className="input"
-                  placeholder="0.00"
-                  min="0"
-                  step="0.01"
-                />
+          {isSale ? (
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                Pret achizitie
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Pret (EUR)</label>
+                  <input
+                    type="number"
+                    value={form.salePrice}
+                    onChange={(e) => update('salePrice', e.target.value)}
+                    className="input"
+                    placeholder="0"
+                    min="0"
+                    step="1"
+                  />
+                </div>
+                <div className="flex items-end pb-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.salePriceVatIncluded}
+                      onChange={(e) => update('salePriceVatIncluded', e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-slate-700">Pretul include TVA</span>
+                  </label>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                Preturi (EUR/mp/luna)
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="label">Hala</label>
+                  <input
+                    type="number"
+                    value={form.warehousePrice}
+                    onChange={(e) => update('warehousePrice', e.target.value)}
+                    className="input"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="label">Birou</label>
+                  <input
+                    type="number"
+                    value={form.officePrice}
+                    onChange={(e) => update('officePrice', e.target.value)}
+                    className="input"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="label">Mentenanta</label>
+                  <input
+                    type="number"
+                    value={form.maintenancePrice}
+                    onChange={(e) => update('maintenancePrice', e.target.value)}
+                    className="input"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Access - collapsible */}
           <div>
@@ -320,6 +450,192 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
                   />
                   <span className="text-sm text-slate-700">Cross-dock</span>
                 </label>
+              </div>
+            )}
+          </div>
+
+          {/* Technical specs - collapsible */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowTechnical(!showTechnical)}
+              className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700"
+            >
+              {showTechnical ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              Specificatii tehnice
+            </button>
+            {showTechnical && (
+              <div className="mt-3 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Tip temperatura</label>
+                    <select
+                      value={form.temperature}
+                      onChange={(e) => update('temperature', e.target.value)}
+                      className="input"
+                    >
+                      <option value="">-</option>
+                      <option value="ambient">Ambient</option>
+                      <option value="refrigerat">Refrigerat</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">Structura cladire</label>
+                    <input
+                      type="text"
+                      value={form.buildingStructure}
+                      onChange={(e) => update('buildingStructure', e.target.value)}
+                      className="input"
+                      placeholder="ex: concrete, metal"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 flex-wrap">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.sprinkler}
+                      onChange={(e) => update('sprinkler', e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-slate-700">Sprinkler</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.hydrantSystem}
+                      onChange={(e) => update('hydrantSystem', e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-slate-700">Hidranti</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.isuAuthorization}
+                      onChange={(e) => update('isuAuthorization', e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-slate-700">Autorizatie ISU</span>
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Incalzire</label>
+                    <input
+                      type="text"
+                      value={form.heating}
+                      onChange={(e) => update('heating', e.target.value)}
+                      className="input"
+                      placeholder="ex: yes, no, centrala"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Iluminat</label>
+                    <input
+                      type="text"
+                      value={form.lighting}
+                      onChange={(e) => update('lighting', e.target.value)}
+                      className="input"
+                      placeholder="ex: LED"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="label">Grid (latime)</label>
+                    <input
+                      type="text"
+                      value={form.gridStructure}
+                      onChange={(e) => update('gridStructure', e.target.value)}
+                      className="input"
+                      placeholder="ex: 15m | 18m"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Grid (format)</label>
+                    <input
+                      type="text"
+                      value={form.gridFormat}
+                      onChange={(e) => update('gridFormat', e.target.value)}
+                      className="input"
+                      placeholder="ex: x 22.50m"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Incarcare pardoseala (t/mp)</label>
+                    <input
+                      type="number"
+                      value={form.floorLoading}
+                      onChange={(e) => update('floorLoading', e.target.value)}
+                      className="input"
+                      placeholder="0"
+                      min="0"
+                      step="0.1"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Commercial specs - collapsible */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowCommercial(!showCommercial)}
+              className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700"
+            >
+              {showCommercial ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              Specificatii comerciale
+            </button>
+            {showCommercial && (
+              <div className="mt-3 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Service charge (EUR/mp/luna)</label>
+                    <input
+                      type="number"
+                      value={form.serviceCharge}
+                      onChange={(e) => update('serviceCharge', e.target.value)}
+                      className="input"
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Disponibilitate</label>
+                    <input
+                      type="date"
+                      value={form.availableFrom}
+                      onChange={(e) => update('availableFrom', e.target.value)}
+                      className="input"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Durata contract</label>
+                    <input
+                      type="text"
+                      value={form.contractLength}
+                      onChange={(e) => update('contractLength', e.target.value)}
+                      className="input"
+                      placeholder="ex: 6 months + 5 years"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Posibilitati extindere</label>
+                    <input
+                      type="text"
+                      value={form.expandingPossibilities}
+                      onChange={(e) => update('expandingPossibilities', e.target.value)}
+                      className="input"
+                      placeholder="ex: yes, within the park"
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>

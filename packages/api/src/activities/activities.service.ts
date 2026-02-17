@@ -16,17 +16,22 @@ export class ActivitiesService {
     persons: true,
   };
 
-  async findAll(page: number = 1, limit: number = 20) {
+  async findAll(page: number = 1, limit: number = 20, agencyId?: number | null) {
     const skip = (page - 1) * limit;
+    const where: Record<string, unknown> = {};
+    if (agencyId) {
+      where.user = { agencyId };
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.activity.findMany({
+        where,
         skip,
         take: limit,
         include: this.includeRelations,
         orderBy: { date: 'desc' },
       }),
-      this.prisma.activity.count(),
+      this.prisma.activity.count({ where }),
     ]);
 
     return {
@@ -189,9 +194,14 @@ export class ActivitiesService {
     filters: Record<string, unknown>,
     page: number = 1,
     limit: number = 20,
+    agencyId?: number | null,
   ) {
     const skip = (page - 1) * limit;
     const where: Record<string, unknown> = {};
+
+    if (agencyId) {
+      where.user = { agencyId };
+    }
 
     if (filters.activityType) {
       where.activityType = filters.activityType;

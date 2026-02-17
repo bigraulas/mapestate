@@ -6,6 +6,7 @@ import {
   Square,
   CheckCircle,
   Loader2,
+  Users,
 } from 'lucide-react';
 import {
   BarChart,
@@ -19,6 +20,8 @@ import {
   Cell,
 } from 'recharts';
 import { dashboardService } from '@/services/dashboard.service';
+import { usersService } from '@/services/users.service';
+import { useAuth } from '@/hooks/useAuth';
 
 interface KpiData {
   activeRequests: number;
@@ -46,6 +49,22 @@ interface ExpiringLease {
   endDate: string;
   daysUntilExpiry: number;
   priority: 'critical' | 'warning' | 'normal';
+}
+
+interface BrokerPerf {
+  id: number;
+  name: string;
+  email: string;
+  activeDeals: number;
+  wonDeals: number;
+  lostDeals: number;
+  estimatedFee: number;
+}
+
+interface BrokerOption {
+  id: number;
+  firstName: string;
+  lastName: string;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -105,20 +124,52 @@ function Spinner() {
 }
 
 export default function DashboardPage() {
+  const { isAdmin } = useAuth();
   const [kpis, setKpis] = useState<KpiData | null>(null);
   const [pipeline, setPipeline] = useState<PipelineItem[]>([]);
   const [monthlySales, setMonthlySales] = useState<MonthlySalesItem[]>([]);
   const [expiringLeases, setExpiringLeases] = useState<ExpiringLease[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Admin-specific
+  const [brokerPerformance, setBrokerPerformance] = useState<BrokerPerf[]>([]);
+  const [brokers, setBrokers] = useState<BrokerOption[]>([]);
+  const [selectedBrokerId, setSelectedBrokerId] = useState<number | undefined>(undefined);
+
+  // Fetch broker list for filter (admin only)
+  useEffect(() => {
+    if (!isAdmin) return;
+    const fetchBrokers = async () => {
+      try {
+        const res = await usersService.getAll(1, 100);
+        setBrokers(res.data.data ?? []);
+      } catch {}
+    };
+    fetchBrokers();
+  }, [isAdmin]);
+
+  // Fetch broker performance (admin only, once)
+  useEffect(() => {
+    if (!isAdmin) return;
+    const fetchPerf = async () => {
+      try {
+        const res = await dashboardService.getBrokerPerformance();
+        setBrokerPerformance(res.data);
+      } catch {}
+    };
+    fetchPerf();
+  }, [isAdmin]);
+
+  // Fetch dashboard data (filtered by broker when selected)
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       try {
         const [kpiRes, pipelineRes, salesRes, leasesRes] = await Promise.all([
-          dashboardService.getKpis(),
-          dashboardService.getPipeline(),
-          dashboardService.getMonthlySales(),
-          dashboardService.getExpiringLeases(),
+          dashboardService.getKpis(selectedBrokerId),
+          dashboardService.getPipeline(selectedBrokerId),
+          dashboardService.getMonthlySales(selectedBrokerId),
+          dashboardService.getExpiringLeases(selectedBrokerId),
         ]);
 
         setKpis(kpiRes.data);
@@ -133,9 +184,9 @@ export default function DashboardPage() {
     };
 
     fetchData();
-  }, []);
+  }, [selectedBrokerId]);
 
-  if (loading) {
+  if (loading && !kpis) {
     return (
       <div className="page-container">
         <Spinner />
@@ -152,12 +203,30 @@ export default function DashboardPage() {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <LayoutDashboard className="w-6 h-6 text-primary-600" />
-        <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">Prezentare generala a activitatii</p>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <LayoutDashboard className="w-6 h-6 text-primary-600" />
+          <div>
+            <h1 className="page-title">Dashboard</h1>
+            <p className="page-subtitle">Prezentare generala a activitatii</p>
+          </div>
         </div>
+
+        {/* Broker filter - admin only */}
+        {isAdmin && (
+          <select
+            value={selectedBrokerId ?? ''}
+            onChange={(e) => setSelectedBrokerId(e.target.value ? Number(e.target.value) : undefined)}
+            className="input !w-auto min-w-[200px]"
+          >
+            <option value="">Toti brokerii</option>
+            {brokers.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.firstName} {b.lastName}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* KPI Cards */}
@@ -218,6 +287,51 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Broker Performance Table - admin only */}
+      {isAdmin && !selectedBrokerId && brokerPerformance.length > 0 && (
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-5 h-5 text-primary-600" />
+            <h2 className="text-base font-semibold text-slate-900">
+              Performanta Brokeri
+            </h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="text-left py-3 px-4 font-medium text-slate-600">Broker</th>
+                  <th className="text-right py-3 px-4 font-medium text-slate-600">Dealuri Active</th>
+                  <th className="text-right py-3 px-4 font-medium text-slate-600">Castigate</th>
+                  <th className="text-right py-3 px-4 font-medium text-slate-600">Pierdute</th>
+                  <th className="text-right py-3 px-4 font-medium text-slate-600">Fee Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {brokerPerformance.map((bp) => (
+                  <tr key={bp.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                    <td className="py-3 px-4">
+                      <div className="font-medium text-slate-900">{bp.name}</div>
+                      <div className="text-xs text-slate-400">{bp.email}</div>
+                    </td>
+                    <td className="py-3 px-4 text-right text-slate-700">{bp.activeDeals}</td>
+                    <td className="py-3 px-4 text-right">
+                      <span className="text-emerald-600 font-medium">{bp.wonDeals}</span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <span className="text-red-500 font-medium">{bp.lostDeals}</span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-medium text-slate-900">
+                      {formatCurrency(bp.estimatedFee)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

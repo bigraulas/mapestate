@@ -41,10 +41,12 @@ COPY --from=builder /app/packages/api/prisma/ packages/api/prisma/
 COPY --from=builder /app/packages/shared/ packages/shared/
 COPY --from=builder /app/packages/api/package.json packages/api/package.json
 
-# Create uploads directory
-RUN mkdir -p packages/api/uploads
+# Create uploads directory with proper permissions
+RUN mkdir -p packages/api/uploads && chown -R node:node /app
 
 EXPOSE 3000
+
+USER node
 
 WORKDIR /app/packages/api
 

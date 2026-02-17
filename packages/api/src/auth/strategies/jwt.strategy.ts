@@ -26,10 +26,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload) {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
+      include: { agency: { select: { status: true } } },
     });
 
     if (!user) {
       throw new UnauthorizedException('User not found');
+    }
+
+    // Check if agency is suspended
+    if (user.agencyId && user.agency?.status === 'SUSPENDED') {
+      throw new UnauthorizedException('Agency is suspended');
     }
 
     return {
@@ -38,6 +44,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       role: user.role,
       firstName: user.firstName,
       lastName: user.lastName,
+      agencyId: user.agencyId,
     };
   }
 }

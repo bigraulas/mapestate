@@ -1,5 +1,6 @@
 import {
   Role,
+  AgencyStatus,
   TransactionType,
   RequestStatus,
   RequestType,
@@ -18,6 +19,7 @@ export interface User {
   phone?: string | null;
   role: Role;
   avatar?: string | null;
+  agencyId?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -50,6 +52,7 @@ export interface Building {
   hydrantSystem?: boolean;
   isuAuthorization?: boolean;
   temperature?: string | null;
+  expandingPossibilities?: string | null;
   buildToSuit?: boolean;
   polygonPoints?: Array<{ lat: number; lng: number }> | null;
   serviceCharge?: number | null;
@@ -79,6 +82,7 @@ export interface UnitSpace {
 export interface Unit {
   id: number;
   name: string;
+  transactionType?: TransactionType;
   warehouseSpace?: UnitSpace | null;
   officeSpace?: UnitSpace | null;
   sanitarySpace?: UnitSpace | null;
@@ -97,6 +101,24 @@ export interface Unit {
   driveins?: number | null;
   crossDock?: boolean;
   images?: string[];
+  // Technical specs
+  temperature?: string | null;
+  sprinkler?: boolean;
+  hydrantSystem?: boolean;
+  isuAuthorization?: boolean;
+  heating?: string | null;
+  buildingStructure?: string | null;
+  gridStructure?: string | null;
+  gridFormat?: string | null;
+  floorLoading?: number | null;
+  lighting?: string | null;
+  // Commercial specs
+  serviceCharge?: number | null;
+  availableFrom?: string | null;
+  contractLength?: string | null;
+  expandingPossibilities?: string | null;
+  salePrice?: number | null;
+  salePriceVatIncluded?: boolean;
   buildingId: number;
   building?: Building;
   userId: number;
@@ -151,6 +173,7 @@ export interface PropertyRequest {
   id: number;
   name: string;
   numberOfSqm?: number | null;
+  minHeight?: number | null;
   estimatedFeeValue?: number | null;
   contractPeriod?: number | null;
   breakOptionAfter?: number | null;
@@ -161,6 +184,9 @@ export interface PropertyRequest {
   lostReason?: string | null;
   notes?: string | null;
   closedAt?: string | null;
+  searchLat?: number | null;
+  searchLng?: number | null;
+  searchRadius?: number | null;
   companyId?: number | null;
   company?: Company;
   personId?: number | null;
@@ -272,4 +298,32 @@ export interface Tenant {
   unit?: Unit;
   companyId: number;
   company?: Company;
+}
+
+export interface Agency {
+  id: number;
+  name: string;
+  logo?: string | null;
+  coverImage?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  primaryColor: string;
+  status: AgencyStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Invitation {
+  id: number;
+  email: string;
+  token: string;
+  role: Role;
+  firstName: string;
+  lastName: string;
+  agencyId: number;
+  expiresAt: string;
+  acceptedAt?: string | null;
+  createdAt: string;
 }

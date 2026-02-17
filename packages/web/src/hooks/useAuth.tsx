@@ -17,6 +17,7 @@ export interface User {
   role: string;
   phone?: string | null;
   avatar?: string | null;
+  agencyId?: number | null;
 }
 
 interface AuthContextType {
@@ -26,6 +27,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAdmin: boolean;
+  isPlatformAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,7 +35,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(
-    () => localStorage.getItem('dunwell_token'),
+    () => localStorage.getItem('mapestate_token'),
   );
   const [loading, setLoading] = useState(true);
   const initDone = useRef(false);
@@ -41,8 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('dunwell_token');
-    localStorage.removeItem('dunwell_user');
+    localStorage.removeItem('mapestate_token');
+    localStorage.removeItem('mapestate_user');
   }, []);
 
   // On mount only, check for existing token and fetch user
@@ -51,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initDone.current = true;
 
     const initAuth = async () => {
-      const savedToken = localStorage.getItem('dunwell_token');
+      const savedToken = localStorage.getItem('mapestate_token');
       if (!savedToken) {
         setLoading(false);
         return;
@@ -61,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const response = await api.get('/auth/me');
         const userData = response.data;
         setUser(userData);
-        localStorage.setItem('dunwell_user', JSON.stringify(userData));
+        localStorage.setItem('mapestate_user', JSON.stringify(userData));
       } catch {
         logout();
       } finally {
@@ -81,14 +83,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setToken(accessToken);
     setUser(userData);
-    localStorage.setItem('dunwell_token', accessToken);
-    localStorage.setItem('dunwell_user', JSON.stringify(userData));
+    localStorage.setItem('mapestate_token', accessToken);
+    localStorage.setItem('mapestate_user', JSON.stringify(userData));
   };
 
-  const isAdmin = user?.role === 'ADMIN';
+  const isPlatformAdmin = user?.role === 'PLATFORM_ADMIN';
+  const isAdmin = user?.role === 'ADMIN' || isPlatformAdmin;
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, isAdmin }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, isAdmin, isPlatformAdmin }}>
       {children}
     </AuthContext.Provider>
   );

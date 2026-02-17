@@ -24,6 +24,10 @@ export class CreateRequestDto {
 
   @IsNumber()
   @IsOptional()
+  minHeight?: number;
+
+  @IsNumber()
+  @IsOptional()
   estimatedFeeValue?: number;
 
   @IsNumber()
@@ -58,4 +62,16 @@ export class CreateRequestDto {
   @IsNumber({}, { each: true })
   @IsOptional()
   locationIds?: number[];
+
+  @IsNumber()
+  @IsOptional()
+  searchLat?: number;
+
+  @IsNumber()
+  @IsOptional()
+  searchLng?: number;
+
+  @IsNumber()
+  @IsOptional()
+  searchRadius?: number;
 }

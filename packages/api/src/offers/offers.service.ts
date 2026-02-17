@@ -5,6 +5,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { PdfGeneratorService } from './pdf-generator.service';
+import * as fs from 'fs';
+import * as path from 'path';
+import { randomUUID } from 'crypto';
 import { CreateOfferDto } from './dto/create-offer.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
@@ -15,13 +19,19 @@ export class OffersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
+    private readonly pdfGenerator: PdfGeneratorService,
   ) {}
 
-  async findAll(page: number = 1, limit: number = 20) {
+  async findAll(page: number = 1, limit: number = 20, agencyId?: number | null) {
     const skip = (page - 1) * limit;
+    const where: Record<string, unknown> = {};
+    if (agencyId) {
+      where.user = { agencyId };
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.offer.findMany({
+        where,
         skip,
         take: limit,
         include: {
@@ -39,7 +49,7 @@ export class OffersService {
         },
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.offer.count(),
+      this.prisma.offer.count({ where }),
     ]);
 
     return {
@@ -174,7 +184,7 @@ export class OffersService {
 
     const buildings = await this.prisma.building.findMany({
       where: { id: { in: dto.buildingIds } },
-      include: { location: true },
+      include: { location: true, units: true },
     });
 
     if (buildings.length === 0) {
@@ -223,6 +233,14 @@ export class OffersService {
       createdOffers.push({ offer, building });
     }
 
+    // Generate PDF for attachment
+    let pdfBuffer: Buffer | undefined;
+    try {
+      pdfBuffer = await this.generatePdf(dto.dealId, dto.buildingIds);
+    } catch {
+      // PDF generation failure shouldn't block email sending
+    }
+
     // Send email
     const emailResult = await this.emailService.sendOfferEmail({
       to: recipientEmails,
@@ -237,6 +255,7 @@ export class OffersService {
         location: b.location?.name,
       })),
       message: dto.message,
+      pdfBuffer,
     });
 
     // Update offers with email status
@@ -265,18 +284,31 @@ export class OffersService {
     };
   }
 
-  async generatePdf(dealId: number): Promise<Buffer> {
+  async generatePdf(dealId: number, buildingIds?: number[]): Promise<Buffer> {
     const deal = await this.prisma.propertyRequest.findUnique({
       where: { id: dealId },
       include: {
         company: true,
         person: true,
         locations: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            avatar: true,
+            agencyId: true,
+          },
+        },
         offers: {
           include: {
             offerGroups: {
               include: {
-                building: true,
+                building: {
+                  include: { location: true, units: true },
+                },
                 groupItems: { include: { unit: true } },
               },
             },
@@ -289,62 +321,104 @@ export class OffersService {
       throw new NotFoundException('Deal with ID ' + dealId + ' not found');
     }
 
-    // pdfkit is already installed in package.json
-    const PDFDocument = require('pdfkit');
+    // Get agency from the deal user's agencyId
+    const agencyId = deal.user?.agencyId ?? 1;
+    let agency = await this.prisma.agency.findUnique({
+      where: { id: agencyId },
+    });
+    if (!agency) {
+      agency = {
+        id: 1,
+        name: 'MapEstate',
+        logo: null,
+        coverImage: null,
+        address: null,
+        phone: null,
+        email: null,
+        website: null,
+        primaryColor: '#0d9488',
+        status: 'ACTIVE' as any,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    }
 
-    return new Promise((resolve) => {
-      const doc = new PDFDocument({ size: 'A4', margin: 50 });
-      const chunks: Buffer[] = [];
+    // Determine which buildings to include
+    let buildings: Array<{
+      id: number;
+      name: string;
+      address?: string | null;
+      latitude?: number | null;
+      longitude?: number | null;
+      transactionType?: string;
+      expandingPossibilities?: string | null;
+      location?: { name: string; county?: string } | null;
+      units: any[];
+    }>;
 
-      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-
-      // Header
-      doc.fontSize(20).text('Dunwell CRM', { align: 'center' });
-      doc.moveDown(0.5);
-      doc.fontSize(16).text('Oferta: ' + deal.name, { align: 'center' });
-      doc.moveDown();
-
-      // Deal info
-      doc.fontSize(10).fillColor('#666');
-      if (deal.company) doc.text('Companie: ' + deal.company.name);
-      if (deal.person) doc.text('Contact: ' + deal.person.name);
-      if (deal.numberOfSqm)
-        doc.text('Suprafata ceruta: ' + deal.numberOfSqm + ' mp');
-      if (deal.requestType)
-        doc.text(
-          'Tip: ' + (deal.requestType === 'RENT' ? 'Inchiriere' : 'Vanzare'),
-        );
-      doc.moveDown();
-
-      // Properties
-      doc
-        .fontSize(12)
-        .fillColor('#000')
-        .text('Proprietati oferite:', { underline: true });
-      doc.moveDown(0.5);
-
+    if (buildingIds && buildingIds.length > 0) {
+      // Fetch specific buildings with their units
+      const fetched = await this.prisma.building.findMany({
+        where: { id: { in: buildingIds } },
+        include: { location: true, units: true },
+      });
+      buildings = fetched;
+    } else {
+      // Extract buildings from existing offers
+      const buildingMap = new Map<number, any>();
       for (const offer of deal.offers) {
         for (const group of offer.offerGroups || []) {
-          doc.fontSize(10).fillColor('#333');
-          doc.text(group.building?.name || group.name);
-          if (group.address)
-            doc.fontSize(8).fillColor('#666').text('  ' + group.address);
-          if (group.warehouseSqm)
-            doc.text('  Depozit: ' + group.warehouseSqm + ' mp');
-          doc.moveDown(0.3);
+          if (group.building && !buildingMap.has(group.building.id)) {
+            buildingMap.set(group.building.id, group.building);
+          }
         }
       }
+      buildings = Array.from(buildingMap.values());
+    }
 
-      // Footer
-      doc.moveDown(2);
-      doc
-        .fontSize(8)
-        .fillColor('#999')
-        .text('Generat prin Dunwell CRM', { align: 'center' });
+    if (buildings.length === 0) {
+      throw new BadRequestException('No buildings found for this deal');
+    }
 
-      doc.end();
-    });
+    return this.pdfGenerator.generate(
+      {
+        name: deal.name,
+        dealType: deal.dealType,
+        company: deal.company,
+        person: deal.person,
+        locations: deal.locations,
+        user: deal.user,
+      },
+      buildings,
+      agency,
+    );
+  }
+
+  // ── Shared PDF (public link) ─────────────────────────────────────────
+
+  private readonly sharedPdfDir = path.join(process.cwd(), 'uploads', 'shared-pdfs');
+
+  async createSharedPdf(dealId: number, buildingIds?: number[]): Promise<string> {
+    const pdfBuffer = await this.generatePdf(dealId, buildingIds);
+
+    // Ensure directory exists
+    if (!fs.existsSync(this.sharedPdfDir)) {
+      fs.mkdirSync(this.sharedPdfDir, { recursive: true });
+    }
+
+    const token = randomUUID();
+    const filePath = path.join(this.sharedPdfDir, `${token}.pdf`);
+    fs.writeFileSync(filePath, pdfBuffer);
+
+    return token;
+  }
+
+  getSharedPdfPath(token: string): string | null {
+    const filePath = path.join(this.sharedPdfDir, `${token}.pdf`);
+    if (fs.existsSync(filePath)) {
+      return filePath;
+    }
+    return null;
   }
 
   // ── Offer Groups ─────────────────────────────────────────────────────

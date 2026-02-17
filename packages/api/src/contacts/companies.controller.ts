@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  Req,
   ParseIntPipe,
   UseGuards,
   DefaultValuePipe,
@@ -24,10 +25,11 @@ export class CompaniesController {
 
   @Get()
   findAll(
+    @Req() req: any,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    return this.companiesService.findAll(page, limit);
+    return this.companiesService.findAll(page, limit, req.user.agencyId);
   }
 
   @Get(':id')
@@ -58,11 +60,12 @@ export class CompaniesController {
 
   @Post('filter')
   filter(
+    @Req() req: any,
     @Body('name') name: string,
     @Body('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Body('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    return this.companiesService.filter(name, page, limit);
+    return this.companiesService.filter(name, page, limit, req.user.agencyId);
   }
 
   @Post(':id/logo')

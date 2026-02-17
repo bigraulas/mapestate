@@ -7,11 +7,16 @@ import { UpdatePersonDto } from './dto/update-person.dto';
 export class PersonsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(page: number = 1, limit: number = 20) {
+  async findAll(page: number = 1, limit: number = 20, agencyId?: number | null) {
     const skip = (page - 1) * limit;
+    const where: Record<string, unknown> = {};
+    if (agencyId) {
+      where.user = { agencyId };
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.person.findMany({
+        where,
         skip,
         take: limit,
         include: {
@@ -21,7 +26,7 @@ export class PersonsService {
         },
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.person.count(),
+      this.prisma.person.count({ where }),
     ]);
 
     return {
@@ -88,15 +93,19 @@ export class PersonsService {
     });
   }
 
-  async search(query: string) {
+  async search(query: string, agencyId?: number | null) {
+    const orConditions = [
+      { name: { contains: query, mode: 'insensitive' as const } },
+      { emails: { array_contains: query } },
+      { phones: { array_contains: query } },
+    ];
+
+    const where: Record<string, unknown> = agencyId
+      ? { AND: [{ user: { agencyId } }, { OR: orConditions }] }
+      : { OR: orConditions };
+
     const data = await this.prisma.person.findMany({
-      where: {
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { emails: { array_contains: query } },
-          { phones: { array_contains: query } },
-        ],
-      },
+      where,
       include: {
         company: true,
         label: true,

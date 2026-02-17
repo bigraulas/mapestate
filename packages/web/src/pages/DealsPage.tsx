@@ -13,13 +13,13 @@ import {
   RequestStatus,
   REQUEST_STATUS_LABELS,
   REQUEST_STATUS_COLORS,
-  DealType,
-  DEAL_TYPE_LABELS,
 } from '@dunwell/shared';
+import { useAuth } from '@/hooks/useAuth';
 import { dealsService } from '@/services/deals.service';
+import { usersService } from '@/services/users.service';
 import DataTable, { type Column } from '@/components/shared/DataTable';
 import Pagination from '@/components/shared/Pagination';
-import StatusBadge from '@/components/shared/StatusBadge';
+// StatusBadge no longer used – inline dropdown replaces it
 import Modal from '@/components/shared/Modal';
 import RequestFormModal from '@/components/shared/RequestFormModal';
 import ColdSalesModal from '@/components/shared/ColdSalesModal';
@@ -39,6 +39,7 @@ interface RequestRow {
   dealType?: string;
   company?: { id: number; name: string } | null;
   person?: { id: number; name: string } | null;
+  user?: { id: number; firstName: string; lastName: string; email: string } | null;
 }
 
 interface BoardColumn {
@@ -82,7 +83,12 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default function DealsPage() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<'table' | 'kanban'>('table');
+
+  // Admin state
+  const [brokers, setBrokers] = useState<{id: number; firstName: string; lastName: string}[]>([]);
+  const [selectedBrokerId, setSelectedBrokerId] = useState<number | undefined>(undefined);
 
   // Table state
   const [rows, setRows] = useState<RequestRow[]>([]);
@@ -106,12 +112,21 @@ export default function DealsPage() {
   const [statusSubmitting, setStatusSubmitting] = useState(false);
   const [statusError, setStatusError] = useState('');
 
+  // ----- Fetch brokers (admin only) -----
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    usersService.getAll(1, 100).then((res) => {
+      setBrokers(res.data?.data ?? []);
+    }).catch(() => {});
+  }, [isAdmin]);
+
   // ----- Data fetching -----
 
   const fetchTable = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await dealsService.getAll(page, 20);
+      const res = await dealsService.getMy(page, 20, selectedBrokerId);
       const body = res.data;
       setRows(body.data ?? []);
       setTotalPages(body.meta?.totalPages ?? 1);
@@ -120,12 +135,12 @@ export default function DealsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, selectedBrokerId]);
 
   const fetchBoard = useCallback(async () => {
     setBoardLoading(true);
     try {
-      const res = await dealsService.getBoard();
+      const res = await dealsService.getBoard(selectedBrokerId);
       const columns: BoardColumn[] = res.data ?? [];
 
       const won = columns.find((c) => c.status === RequestStatus.WON);
@@ -141,7 +156,7 @@ export default function DealsPage() {
     } finally {
       setBoardLoading(false);
     }
-  }, []);
+  }, [selectedBrokerId]);
 
   useEffect(() => {
     if (activeTab === 'table') {
@@ -164,6 +179,33 @@ export default function DealsPage() {
     setLostReason('');
     setStatusError('');
     setStatusDialogOpen(true);
+  };
+
+  /** Inline status change from the table dropdown */
+  const handleInlineStatusChange = async (req: RequestRow, status: string) => {
+    // LOST needs a reason → open the modal instead
+    if (status === RequestStatus.LOST) {
+      setSelectedRequest(req);
+      setNewStatus(RequestStatus.LOST);
+      setLostReason('');
+      setStatusError('');
+      setStatusDialogOpen(true);
+      return;
+    }
+
+    // Optimistic update in local state
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === req.id ? { ...r, status: status as RequestStatus } : r,
+      ),
+    );
+
+    try {
+      await dealsService.updateStatus(req.id, { status });
+    } catch {
+      // Revert on failure & refetch
+      fetchTable();
+    }
   };
 
   const handleStatusSubmit = async () => {
@@ -210,6 +252,11 @@ export default function DealsPage() {
         </span>
       ),
     },
+    ...(isAdmin ? [{
+      key: 'user' as const,
+      header: 'Broker',
+      render: (r: RequestRow) => r.user ? `${r.user.firstName} ${r.user.lastName}` : '-',
+    }] : []),
     {
       key: 'company',
       header: 'Companie',
@@ -236,7 +283,30 @@ export default function DealsPage() {
     {
       key: 'status',
       header: 'Status',
-      render: (r) => <StatusBadge status={r.status} />,
+      render: (r) => {
+        const color = REQUEST_STATUS_COLORS[r.status] ?? '#6B7280';
+        return (
+          <select
+            value={r.status}
+            onChange={(e) => {
+              e.stopPropagation();
+              handleInlineStatusChange(r, e.target.value);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs font-medium rounded-md border-0 py-1 pl-2 pr-7 cursor-pointer focus:ring-2 focus:ring-primary-500"
+            style={{
+              backgroundColor: `${color}18`,
+              color,
+            }}
+          >
+            {ALL_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {REQUEST_STATUS_LABELS[s]}
+              </option>
+            ))}
+          </select>
+        );
+      },
     },
     {
       key: 'requestType',
@@ -267,6 +337,18 @@ export default function DealsPage() {
             </p>
           </div>
         </div>
+        {isAdmin && (
+          <select
+            value={selectedBrokerId ?? ''}
+            onChange={(e) => setSelectedBrokerId(e.target.value ? Number(e.target.value) : undefined)}
+            className="input !w-auto min-w-[180px]"
+          >
+            <option value="">Toti brokerii</option>
+            {brokers.map((b) => (
+              <option key={b.id} value={b.id}>{b.firstName} {b.lastName}</option>
+            ))}
+          </select>
+        )}
         <div className="flex items-center gap-2">
           <button className="btn-primary" onClick={() => setFormOpen(true)}>
             <Plus className="w-4 h-4" />
@@ -389,6 +471,11 @@ export default function DealsPage() {
                             {req.company && (
                               <p className="text-xs text-slate-500 mb-1 truncate">
                                 {req.company.name}
+                              </p>
+                            )}
+                            {isAdmin && req.user && (
+                              <p className="text-[10px] text-primary-600 truncate">
+                                {req.user.firstName} {req.user.lastName}
                               </p>
                             )}
                             <div className="flex items-center gap-3 text-xs text-slate-400">

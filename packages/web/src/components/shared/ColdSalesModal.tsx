@@ -59,7 +59,7 @@ export default function ColdSalesModal({
       try {
         const [buildingsRes, personsRes] = await Promise.all([
           buildingsService.getAll({ page: 1, limit: 200 }),
-          personsService.getAll(1, 500),
+          personsService.getAll({ page: 1, limit: 500 }),
         ]);
         setBuildings(buildingsRes.data?.data || buildingsRes.data || []);
         setPersons(personsRes.data?.data || personsRes.data || []);
@@ -171,13 +171,18 @@ export default function ColdSalesModal({
         message: message.trim() || undefined,
       });
 
-      // Send offers for each created deal
-      const deals: { id: number }[] = Array.isArray(res.data)
-        ? res.data
-        : [res.data];
+      // Send offers for each created deal (skip persons without emails)
+      const raw = res.data;
+      const deals: { id: number; personId?: number }[] = raw?.deals || (Array.isArray(raw) ? raw : [raw]);
+
+      // Only send for deals whose person has emails
+      const dealsWithEmail = deals.filter((deal) => {
+        const p = persons.find((pp) => pp.id === deal.personId);
+        return p?.emails && p.emails.length > 0;
+      });
 
       await Promise.all(
-        deals.map((deal) =>
+        dealsWithEmail.map((deal) =>
           dealsService.sendOffers({
             dealId: deal.id,
             buildingIds: selectedBuildingIds,
@@ -395,6 +400,20 @@ export default function ColdSalesModal({
                 placeholder="Adauga un mesaj personalizat pentru email..."
               />
             </div>
+
+            {/* Warning: persons without emails */}
+            {selectedPersonIds.length > 0 && (() => {
+              const noEmail = selectedPersonIds.filter((id) => {
+                const p = persons.find((pp) => pp.id === id);
+                return !p?.emails || p.emails.length === 0;
+              });
+              return noEmail.length > 0 ? (
+                <div className="rounded-lg bg-amber-50 border border-amber-100 px-4 py-3 text-sm text-amber-700">
+                  <MailX className="w-4 h-4 inline mr-1" />
+                  {noEmail.length} {noEmail.length === 1 ? 'contact nu are' : 'contacte nu au'} email si {noEmail.length === 1 ? 'nu va primi' : 'nu vor primi'} oferta.
+                </div>
+              ) : null;
+            })()}
 
             {/* Actions */}
             <div className="flex items-center justify-end gap-3 pt-2">

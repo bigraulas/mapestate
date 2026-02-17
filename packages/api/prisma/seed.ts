@@ -6,11 +6,44 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seeding database...');
 
-  // Create admin user
   const hashedPassword = await bcrypt.hash('password', 10);
+
+  // Create default agency (replaces AgencySettings)
+  const agency = await prisma.agency.upsert({
+    where: { id: 1 },
+    update: {},
+    create: {
+      id: 1,
+      name: 'Dunwell',
+      address: '218 Calea Floreasca, District 1, Bucharest, Romania',
+      phone: '+40 (0) 723 456 789',
+      email: 'office@dunwell.ro',
+      website: 'www.dunwell.ro',
+      primaryColor: '#0d9488',
+    },
+  });
+  console.log(`Created agency: ${agency.name}`);
+
+  // Create platform admin (no agency)
+  const platformAdmin = await prisma.user.upsert({
+    where: { email: 'platform@dunwell.ro' },
+    update: {},
+    create: {
+      email: 'platform@dunwell.ro',
+      password: hashedPassword,
+      firstName: 'Platform',
+      lastName: 'Admin',
+      phone: '+40721000099',
+      role: Role.PLATFORM_ADMIN,
+      agencyId: null,
+    },
+  });
+  console.log(`Created platform admin: ${platformAdmin.email}`);
+
+  // Create admin user (belongs to Dunwell agency)
   const admin = await prisma.user.upsert({
     where: { email: 'admin@dunwell.ro' },
-    update: {},
+    update: { agencyId: 1 },
     create: {
       email: 'admin@dunwell.ro',
       password: hashedPassword,
@@ -18,14 +51,15 @@ async function main() {
       lastName: 'Dunwell',
       phone: '+40721000000',
       role: Role.ADMIN,
+      agencyId: 1,
     },
   });
   console.log(`Created admin user: ${admin.email}`);
 
-  // Create broker user
+  // Create broker user (belongs to Dunwell agency)
   const broker = await prisma.user.upsert({
     where: { email: 'broker@dunwell.ro' },
-    update: {},
+    update: { agencyId: 1 },
     create: {
       email: 'broker@dunwell.ro',
       password: hashedPassword,
@@ -33,6 +67,7 @@ async function main() {
       lastName: 'Popescu',
       phone: '+40721000001',
       role: Role.BROKER,
+      agencyId: 1,
     },
   });
   console.log(`Created broker user: ${broker.email}`);
@@ -109,10 +144,16 @@ async function main() {
     { name: 'Târgu Mureș', county: 'Mureș' },
   ];
 
-  for (const loc of locations) {
-    await prisma.location.create({ data: loc });
+  // Only create locations if table is empty (avoid duplicates on re-seed)
+  const existingLocations = await prisma.location.count();
+  if (existingLocations === 0) {
+    for (const loc of locations) {
+      await prisma.location.create({ data: loc });
+    }
+    console.log(`Created ${locations.length} locations`);
+  } else {
+    console.log(`Locations already exist (${existingLocations}), skipping`);
   }
-  console.log(`Created ${locations.length} locations`);
 
   console.log('Seed completed successfully!');
 }

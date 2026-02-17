@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: dunwell-db
+    container_name: mapestate-db
     restart: unless-stopped
     ports:
       - "5436:5432"
@@ -14,3 +14,4 @@ services:
 
 volumes:
   postgres_data:
+  dunwell_uploads:

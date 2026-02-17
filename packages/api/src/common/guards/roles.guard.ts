@@ -27,6 +27,11 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('No user found in request');
     }
 
+    // Platform admin bypasses all role checks
+    if (user.role === 'PLATFORM_ADMIN') {
+      return true;
+    }
+
     const hasRole = requiredRoles.some((role) => user.role === role);
 
     if (!hasRole) {

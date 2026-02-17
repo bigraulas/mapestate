@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  Req,
   ParseIntPipe,
   UseGuards,
   DefaultValuePipe,
@@ -27,10 +28,11 @@ export class UsersController {
 
   @Get()
   findAll(
+    @Req() req: any,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    return this.usersService.findAll(page, limit);
+    return this.usersService.findAll(page, limit, req.user.agencyId);
   }
 
   @Get(':id')
@@ -39,8 +41,8 @@ export class UsersController {
   }
 
   @Post()
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.create(dto);
+  create(@Body() dto: CreateUserDto, @Req() req: any) {
+    return this.usersService.create(dto, req.user.agencyId);
   }
 
   @Patch(':id')

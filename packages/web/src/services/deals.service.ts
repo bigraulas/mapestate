@@ -5,10 +5,11 @@ export const dealsService = {
   getAll: (page = 1, limit = 20) =>
     api.get('/requests', { params: { page, limit } }),
 
-  getMy: (page = 1, limit = 20) =>
-    api.get('/requests/my', { params: { page, limit } }),
+  getMy: (page = 1, limit = 20, brokerId?: number) =>
+    api.get('/requests/my', { params: { page, limit, ...(brokerId ? { brokerId } : {}) } }),
 
-  getBoard: () => api.get('/requests/my/board'),
+  getBoard: (brokerId?: number) =>
+    api.get('/requests/my/board', { params: brokerId ? { brokerId } : {} }),
 
   getById: (id: number) => api.get(`/requests/${id}`),
 
@@ -45,4 +46,15 @@ export const dealsService = {
 
   downloadPdf: (dealId: number) =>
     api.get(`/offers/deal/${dealId}/pdf`, { responseType: 'blob' }),
+
+  downloadPdfForBuildings: (dealId: number, buildingIds: number[]) =>
+    api.get(`/offers/deal/${dealId}/pdf?buildingIds=${buildingIds.join(',')}`, {
+      responseType: 'blob',
+    }),
+
+  createPdfLink: (dealId: number, buildingIds: number[]) =>
+    api.post<{ token: string }>(`/offers/deal/${dealId}/pdf-link`, { buildingIds }),
+
+  reassign: (id: number, userId: number) =>
+    api.patch(`/requests/${id}/reassign`, { userId }),
 };

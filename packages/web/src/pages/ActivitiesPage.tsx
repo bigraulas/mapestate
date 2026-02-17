@@ -170,7 +170,7 @@ export default function ActivitiesPage() {
 
     try {
       const [compRes, reqRes] = await Promise.all([
-        companiesService.getAll(1, 500),
+        companiesService.getAll({ page: 1, limit: 500 }),
         requestsService.getAll(1, 500),
       ]);
       setCompanies(compRes.data?.data || compRes.data || []);

@@ -14,3 +14,6 @@ export { usersService } from './users.service';
 export { discoverService } from './discover.service';
 export type { DiscoveredProperty } from './discover.service';
 export { uploadsService } from './uploads.service';
+export { auditService } from './audit.service';
+export { settingsService } from './settings.service';
+export { agenciesService } from './agencies.service';

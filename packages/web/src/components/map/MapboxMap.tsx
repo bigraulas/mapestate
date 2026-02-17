@@ -18,6 +18,19 @@ export interface MapUnit {
   officeSqm: number | null;
 }
 
+export interface DiscoveredMarker {
+  osmId: number;
+  name: string;
+  lat: number;
+  lng: number;
+  type: string;
+  address?: string;
+  city?: string;
+  county?: string;
+  operator?: string;
+  sqm?: number;
+}
+
 export interface MapBuilding {
   id: number;
   name: string;

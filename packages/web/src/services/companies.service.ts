@@ -1,8 +1,8 @@
 import api from './api';
 
 export const companiesService = {
-  getAll: (page = 1, limit = 100) =>
-    api.get('/contacts/companies', { params: { page, limit } }),
+  getAll: (params: { page?: number; limit?: number } = {}) =>
+    api.get('/contacts/companies', { params: { page: params.page ?? 1, limit: params.limit ?? 100 } }),
 
   getById: (id: number) => api.get(`/contacts/companies/${id}`),
 

@@ -19,7 +19,9 @@ COPY packages/web/ packages/web/
 
 # Build
 ARG VITE_API_URL=/api
+ARG VITE_MAPBOX_TOKEN
 ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_MAPBOX_TOKEN=${VITE_MAPBOX_TOKEN}
 
 RUN cd packages/web && npx vite build
 

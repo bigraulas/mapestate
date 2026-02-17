@@ -24,10 +24,11 @@ export class ActivitiesController {
 
   @Get()
   findAll(
+    @Req() req: any,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    return this.activitiesService.findAll(page, limit);
+    return this.activitiesService.findAll(page, limit, req.user.agencyId);
   }
 
   @Get('my/done')
@@ -87,10 +88,11 @@ export class ActivitiesController {
 
   @Post('filter')
   filter(
+    @Req() req: any,
     @Body() filters: Record<string, unknown>,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    return this.activitiesService.filter(filters, page, limit);
+    return this.activitiesService.filter(filters, page, limit, req.user.agencyId);
   }
 }

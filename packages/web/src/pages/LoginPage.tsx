@@ -35,10 +35,10 @@ export default function LoginPage() {
         {/* Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary-600 mb-4">
-            <span className="text-white font-bold text-xl">D</span>
+            <span className="text-white font-bold text-xl">M</span>
           </div>
           <h1 className="text-2xl font-semibold text-slate-900">
-            Dunwell CRM
+            MapEstate
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             Conecteaza-te la contul tau
@@ -101,7 +101,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-2xs text-slate-400 mt-6">
-          Dunwell CRM v1.0
+          MapEstate v1.0
         </p>
       </div>
     </div>

@@ -27,6 +27,48 @@ export class EmailService {
     this.resend = new Resend(this.config.get('RESEND_API_KEY'));
   }
 
+  async sendInvitationEmail(params: {
+    to: string;
+    agencyName: string;
+    firstName: string;
+    inviteUrl: string;
+  }) {
+    const { to, agencyName, firstName, inviteUrl } = params;
+
+    const html = `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+        <div style="text-align:center;margin-bottom:32px">
+          <div style="display:inline-block;width:48px;height:48px;border-radius:12px;background:#0d9488;line-height:48px;text-align:center">
+            <span style="color:#fff;font-weight:bold;font-size:20px">M</span>
+          </div>
+          <h2 style="color:#1e293b;margin:16px 0 0">Invitatie MapEstate</h2>
+        </div>
+        <p style="color:#334155;font-size:16px">Buna ${firstName},</p>
+        <p style="color:#334155;font-size:16px">Ai fost invitat sa te alturi agentiei <strong>${agencyName}</strong> pe platforma MapEstate.</p>
+        <div style="text-align:center;margin:32px 0">
+          <a href="${inviteUrl}" style="display:inline-block;padding:12px 32px;background:#0d9488;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:16px">Creeaza-ti contul</a>
+        </div>
+        <p style="color:#64748b;font-size:14px">Sau copiaza linkul: <a href="${inviteUrl}" style="color:#0d9488">${inviteUrl}</a></p>
+        <p style="color:#94a3b8;font-size:13px;margin-top:32px;border-top:1px solid #e2e8f0;padding-top:16px">Linkul expira in 7 zile. Daca nu ai solicitat aceasta invitatie, ignora acest email.</p>
+      </div>
+    `;
+
+    try {
+      const result = await this.resend.emails.send({
+        from: this.config.get('RESEND_FROM_EMAIL', 'noreply@mapestate.ro'),
+        to: [to],
+        subject: `Invitatie - ${agencyName} pe MapEstate`,
+        html,
+      });
+
+      this.logger.log('Invitation email sent: ' + result.data?.id);
+      return { emailId: result.data?.id, status: 'SENT' as const };
+    } catch (error) {
+      this.logger.error('Failed to send invitation email', error);
+      return { emailId: null, status: 'FAILED' as const };
+    }
+  }
+
   async sendOfferEmail(params: SendOfferEmailParams) {
     const { to, subject, dealName, companyName, buildings, message, pdfBuffer } = params;
 
@@ -58,7 +100,7 @@ export class EmailService {
           </thead>
           <tbody>${buildingRows}</tbody>
         </table>
-        <p style="color:#94a3b8;font-size:12px;margin-top:24px">Trimis prin Dunwell CRM</p>
+        <p style="color:#94a3b8;font-size:12px;margin-top:24px">Trimis prin MapEstate</p>
       </div>
     `;
 
@@ -68,7 +110,7 @@ export class EmailService {
 
     try {
       const result = await this.resend.emails.send({
-        from: this.config.get('RESEND_FROM_EMAIL', 'noreply@dunwell.ro'),
+        from: this.config.get('RESEND_FROM_EMAIL', 'noreply@mapestate.ro'),
         to,
         subject,
         html,

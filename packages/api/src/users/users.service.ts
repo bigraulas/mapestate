@@ -13,6 +13,7 @@ const userSelect = {
   phone: true,
   role: true,
   avatar: true,
+  agencyId: true,
   createdAt: true,
   updatedAt: true,
 };
@@ -21,17 +22,19 @@ const userSelect = {
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(page: number = 1, limit: number = 20) {
+  async findAll(page: number = 1, limit: number = 20, agencyId?: number | null) {
     const skip = (page - 1) * limit;
+    const where = agencyId ? { agencyId } : {};
 
     const [data, total] = await Promise.all([
       this.prisma.user.findMany({
+        where,
         skip,
         take: limit,
         select: userSelect,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.user.count(),
+      this.prisma.user.count({ where }),
     ]);
 
     return {
@@ -58,13 +61,14 @@ export class UsersService {
     return user;
   }
 
-  async create(dto: CreateUserDto) {
+  async create(dto: CreateUserDto, agencyId?: number) {
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     const user = await this.prisma.user.create({
       data: {
         ...dto,
         password: hashedPassword,
+        ...(agencyId ? { agencyId } : {}),
       },
       select: userSelect,
     });

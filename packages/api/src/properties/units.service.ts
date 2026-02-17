@@ -36,26 +36,13 @@ export class UnitsService {
   async create(dto: CreateUnitDto, userId: number) {
     return this.prisma.unit.create({
       data: {
-        name: dto.name,
-        buildingId: dto.buildingId,
+        ...dto,
         userId,
-        usefulHeight: dto.usefulHeight,
-        hasOffice: dto.hasOffice,
-        officeSqm: dto.officeSqm,
-        hasSanitary: dto.hasSanitary,
-        sanitarySqm: dto.sanitarySqm,
-        warehousePrice: dto.warehousePrice,
-        officePrice: dto.officePrice,
-        maintenancePrice: dto.maintenancePrice,
-        floorPlan: dto.floorPlan,
-        photos: dto.photos ?? undefined,
         warehouseSpace: dto.warehouseSpace ?? undefined,
         officeSpace: dto.officeSpace ?? undefined,
         sanitarySpace: dto.sanitarySpace ?? undefined,
         othersSpace: dto.othersSpace ?? undefined,
-        docks: dto.docks,
-        driveins: dto.driveins,
-        crossDock: dto.crossDock,
+        photos: dto.photos ?? undefined,
         images: dto.images ?? undefined,
       },
       include: {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Plus, Table2, Map, Loader2 } from 'lucide-react';
 import type { Building, PaginatedResponse } from '@dunwell/shared';
@@ -9,6 +9,7 @@ import Pagination from '@/components/shared/Pagination';
 import { MapboxMap } from '@/components/map';
 import type { MapBuilding } from '@/components/map';
 import MapSearchBar from '@/components/map/MapSearchBar';
+import { useAuth } from '@/hooks/useAuth';
 
 type Tab = 'tabel' | 'harta';
 
@@ -17,7 +18,7 @@ const transactionTypeLabels: Record<string, string> = {
   [TransactionType.SALE]: 'Vanzare',
 };
 
-const columns: Column<Building>[] = [
+const baseColumns: Column<Building>[] = [
   {
     key: 'name',
     header: 'Nume',
@@ -83,8 +84,18 @@ const columns: Column<Building>[] = [
   },
 ];
 
+const brokerColumn: Column<Building> = {
+  key: 'user',
+  header: 'Broker',
+  render: (row: any) =>
+    row.user
+      ? `${row.user.firstName} ${row.user.lastName}`
+      : '-',
+};
+
 export default function PropertiesPage() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('tabel');
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,6 +108,16 @@ export default function PropertiesPage() {
 
   // Map flyTo state
   const [flyTo, setFlyTo] = useState<{ lng: number; lat: number; zoom?: number } | null>(null);
+
+  const columns = useMemo(() => {
+    if (isAdmin) {
+      // Insert broker column after the location column (index 2)
+      const cols = [...baseColumns];
+      cols.splice(3, 0, brokerColumn);
+      return cols;
+    }
+    return baseColumns;
+  }, [isAdmin]);
 
   const fetchBuildings = useCallback(async (p: number) => {
     setLoading(true);

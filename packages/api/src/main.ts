@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
@@ -9,6 +10,9 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Security headers
+  app.use(helmet());
 
   // Serve uploaded files
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
@@ -18,9 +22,10 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api');
 
-  // CORS
+  // CORS — restrict to FRONTEND_URL in production
+  const frontendUrl = process.env.FRONTEND_URL;
   app.enableCors({
-    origin: true,
+    origin: frontendUrl || true,
     credentials: true,
   });
 
@@ -39,10 +44,13 @@ async function bootstrap() {
   // Global exception filter
   app.useGlobalFilters(new HttpExceptionFilter());
 
+  // Graceful shutdown
+  app.enableShutdownHooks();
+
   const port = process.env.API_PORT || 3000;
   await app.listen(port);
 
-  logger.log(`Dunwell API is running on http://localhost:${port}/api`);
+  logger.log(`MapEstate API is running on http://localhost:${port}/api`);
 }
 
 bootstrap();

@@ -11,8 +11,12 @@ import {
   ParseIntPipe,
   UseGuards,
   DefaultValuePipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Role } from '@prisma/client';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { RequestsService } from './requests.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
@@ -37,28 +41,33 @@ export class RequestsController {
     @Req() req: any,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('brokerId') brokerId?: string,
   ) {
-    return this.requestsService.findMyRequests(req.user.id, page, limit);
+    const effectiveUserId = this.resolveUserId(req.user, brokerId);
+    return this.requestsService.findMyRequests(effectiveUserId, page, limit, req.user.agencyId);
   }
 
   @Get('my/board')
-  findMyBoard(@Req() req: any) {
-    return this.requestsService.findMyBoard(req.user.id);
+  findMyBoard(@Req() req: any, @Query('brokerId') brokerId?: string) {
+    const effectiveUserId = this.resolveUserId(req.user, brokerId);
+    return this.requestsService.findMyBoard(effectiveUserId, req.user.agencyId);
   }
 
   @Get('stats/active')
-  getActiveStats(@Req() req: any) {
-    return this.requestsService.getActiveStats(req.user.id);
+  getActiveStats(@Req() req: any, @Query('brokerId') brokerId?: string) {
+    const effectiveUserId = this.resolveUserId(req.user, brokerId);
+    return this.requestsService.getActiveStats(effectiveUserId, req.user.agencyId);
   }
 
   @Get('stats/closed')
-  getClosedStats(@Req() req: any) {
-    return this.requestsService.getClosedStats(req.user.id);
+  getClosedStats(@Req() req: any, @Query('brokerId') brokerId?: string) {
+    const effectiveUserId = this.resolveUserId(req.user, brokerId);
+    return this.requestsService.getClosedStats(effectiveUserId, req.user.agencyId);
   }
 
   @Get(':id/matches')
-  findMatches(@Param('id', ParseIntPipe) id: number) {
-    return this.requestsService.findMatches(id);
+  findMatches(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.requestsService.findMatches(id, req.user.agencyId);
   }
 
   @Get(':id')
@@ -104,5 +113,26 @@ export class RequestsController {
     @Body() dto: UpdateStatusDto,
   ) {
     return this.requestsService.updateStatus(id, dto);
+  }
+
+  @Patch(':id/reassign')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  reassign(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('userId', ParseIntPipe) newUserId: number,
+    @Req() req: any,
+  ) {
+    return this.requestsService.reassign(id, newUserId, req.user.id);
+  }
+
+  private resolveUserId(
+    user: { id: number; role: string },
+    brokerId?: string,
+  ): number | null {
+    if (user.role === Role.ADMIN || user.role === 'PLATFORM_ADMIN') {
+      return brokerId ? parseInt(brokerId, 10) : null;
+    }
+    return user.id;
   }
 }

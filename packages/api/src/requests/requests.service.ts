@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { RequestStatus } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
@@ -15,9 +16,35 @@ const TERMINAL_STATUSES: RequestStatus[] = [
   RequestStatus.LOST,
 ];
 
+/**
+ * Calculate great-circle distance between two points using the Haversine formula.
+ * Returns distance in km.
+ */
+function haversineDistance(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371; // Earth radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 @Injectable()
 export class RequestsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async findAll(page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
@@ -50,22 +77,34 @@ export class RequestsService {
     };
   }
 
-  async findMyRequests(userId: number, page: number = 1, limit: number = 20) {
+  async findMyRequests(userId: number | null, page: number = 1, limit: number = 20, agencyId?: number | null) {
     const skip = (page - 1) * limit;
+    const userFilter: Record<string, unknown> = userId != null ? { userId } : {};
+    if (agencyId) {
+      userFilter.user = { agencyId };
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.propertyRequest.findMany({
-        where: { userId },
+        where: userFilter,
         skip,
         take: limit,
         include: {
           company: true,
           person: true,
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
           locations: true,
         },
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.propertyRequest.count({ where: { userId } }),
+      this.prisma.propertyRequest.count({ where: userFilter }),
     ]);
 
     return {
@@ -74,12 +113,25 @@ export class RequestsService {
     };
   }
 
-  async findMyBoard(userId: number) {
+  async findMyBoard(userId: number | null, agencyId?: number | null) {
+    const userFilter: Record<string, unknown> = userId != null ? { userId } : {};
+    if (agencyId) {
+      userFilter.user = { agencyId };
+    }
+
     const requests = await this.prisma.propertyRequest.findMany({
-      where: { userId },
+      where: userFilter,
       include: {
         company: true,
         person: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
         locations: true,
       },
       orderBy: { updatedAt: 'desc' },
@@ -94,9 +146,13 @@ export class RequestsService {
     return board;
   }
 
-  async getActiveStats(userId: number) {
+  async getActiveStats(userId: number | null, agencyId?: number | null) {
+    const userFilter: Record<string, unknown> = userId != null ? { userId } : {};
+    if (agencyId) {
+      userFilter.user = { agencyId };
+    }
     const where = {
-      userId,
+      ...userFilter,
       status: { notIn: TERMINAL_STATUSES },
     };
 
@@ -115,10 +171,14 @@ export class RequestsService {
     };
   }
 
-  async getClosedStats(userId: number) {
+  async getClosedStats(userId: number | null, agencyId?: number | null) {
+    const userFilter: Record<string, unknown> = userId != null ? { userId } : {};
+    if (agencyId) {
+      userFilter.user = { agencyId };
+    }
     const count = await this.prisma.propertyRequest.count({
       where: {
-        userId,
+        ...userFilter,
         status: { in: TERMINAL_STATUSES },
       },
     });
@@ -155,6 +215,11 @@ export class RequestsService {
   async create(dto: CreateRequestDto, userId: number) {
     const { locationIds, ...data } = dto;
 
+    // Convert date-only string to proper DateTime for Prisma
+    if (data.startDate && typeof data.startDate === 'string') {
+      (data as any).startDate = new Date(data.startDate);
+    }
+
     const request = await this.prisma.propertyRequest.create({
       data: {
         ...data,
@@ -178,6 +243,11 @@ export class RequestsService {
   async update(id: number, dto: UpdateRequestDto) {
     const existing = await this.findOne(id);
     const { locationIds, ...data } = dto;
+
+    // Convert date-only string to proper DateTime for Prisma
+    if (data.startDate && typeof data.startDate === 'string') {
+      (data as any).startDate = new Date(data.startDate);
+    }
 
     const request = await this.prisma.propertyRequest.update({
       where: { id },
@@ -357,7 +427,7 @@ export class RequestsService {
     return request;
   }
 
-  async findMatches(id: number) {
+  async findMatches(id: number, agencyId?: number | null) {
     const request = await this.prisma.propertyRequest.findUnique({
       where: { id },
       include: { locations: true },
@@ -367,93 +437,158 @@ export class RequestsService {
       throw new NotFoundException(`Request with ID ${id} not found`);
     }
 
-    // Load buildings filtered by transactionType matching requestType
-    const buildingWhere: Record<string, unknown> = {};
-    if (request.requestType) {
-      buildingWhere.transactionType = request.requestType;
-    }
-
+    // Load all buildings with units; filter by unit-level transactionType
     const buildings = await this.prisma.building.findMany({
-      where: buildingWhere,
-      include: { location: true },
+      where: agencyId ? { user: { agencyId } } : {},
+      include: { location: true, units: true },
     });
 
     const requestLocationIds = request.locations.map((l) => l.id);
     const requestLocationCounties = request.locations.map((l) => l.county);
 
     const results = buildings.map((building) => {
-      // SQM score (35% weight)
-      let sqmScore: number;
-      if (request.numberOfSqm && building.availableSqm) {
-        const diff = Math.abs(building.availableSqm - request.numberOfSqm);
-        const tolerance = request.numberOfSqm * 0.3;
-        sqmScore =
-          diff <= tolerance ? Math.round((1 - diff / tolerance) * 100) : 0;
-      } else {
-        sqmScore = 50;
+      // Filter units by transactionType if requestType is specified
+      const matchedUnits = request.requestType
+        ? (building.units || []).filter(
+            (u) => u.transactionType === request.requestType,
+          )
+        : building.units || [];
+
+      // Skip buildings with no matching units when requestType is set
+      if (request.requestType && matchedUnits.length === 0) {
+        return null;
       }
 
-      // Location score (40% weight)
+      // ── SQM score (40% weight) - most important ──
+      // Use sum of warehouseSpace sqm from matched units, fallback to building availableSqm
+      const unitsSqm = matchedUnits.reduce((sum, u) => {
+        const ws = u.warehouseSpace as { sqm?: number } | null;
+        return sum + (ws?.sqm || 0);
+      }, 0);
+      const effectiveSqm = unitsSqm > 0 ? unitsSqm : building.availableSqm;
+
+      let sqmScore: number;
+      if (request.numberOfSqm && effectiveSqm) {
+        const ratio = effectiveSqm / request.numberOfSqm;
+        if (ratio >= 0.7 && ratio <= 2.0) {
+          const deviation = ratio >= 1.0
+            ? (ratio - 1.0) / 1.0
+            : (1.0 - ratio) / 0.3;
+          sqmScore = Math.round((1 - deviation * 0.7) * 100);
+        } else {
+          sqmScore = 0;
+        }
+      } else if (!request.numberOfSqm) {
+        sqmScore = 50;
+      } else {
+        sqmScore = 0;
+      }
+
+      // ── Location score (40% weight) - most important ──
       let locationScore: number;
-      if (requestLocationIds.length === 0) {
-        locationScore = 50;
+      const hasCircle =
+        request.searchLat != null &&
+        request.searchLng != null &&
+        request.searchRadius != null &&
+        request.searchRadius > 0;
+
+      if (hasCircle && building.latitude != null && building.longitude != null) {
+        // Circle-based distance matching
+        const dist = haversineDistance(
+          request.searchLat!,
+          request.searchLng!,
+          building.latitude,
+          building.longitude,
+        );
+        if (dist <= request.searchRadius!) {
+          // Linear falloff: center = 100, edge = 30
+          locationScore = Math.round(100 - (dist / request.searchRadius!) * 70);
+        } else if (dist <= request.searchRadius! * 1.3) {
+          // Slight buffer beyond radius: partial score
+          locationScore = 15;
+        } else {
+          locationScore = 0;
+        }
+      } else if (requestLocationIds.length === 0 && !hasCircle) {
+        locationScore = 50; // No criteria specified, neutral
       } else if (
         building.locationId &&
         requestLocationIds.includes(building.locationId)
       ) {
-        locationScore = 100;
+        locationScore = 100; // Exact city match
       } else if (
         building.location &&
         requestLocationCounties.includes(building.location.county)
       ) {
-        locationScore = 50;
+        locationScore = 40; // Same county but different city
       } else {
-        locationScore = 0;
+        locationScore = 0; // Different region entirely
       }
 
-      // Availability score (25% weight)
-      let availabilityScore = 50;
-      if (request.startDate && building.availableFrom) {
-        const diffMs =
-          building.availableFrom.getTime() - request.startDate.getTime();
-        const diffMonths = diffMs / (1000 * 60 * 60 * 24 * 30);
-        if (diffMonths <= 0) {
-          availabilityScore = 100;
-        } else if (diffMonths <= 3) {
-          availabilityScore = 50;
+      // ── Height score (20% weight when specified, else neutral) ──
+      let heightScore = 50; // Neutral default when not specified
+      if (request.minHeight) {
+        const unitHeights = matchedUnits
+          .map((u) => u.usefulHeight)
+          .filter((h): h is number => h != null && h > 0);
+        const maxHeight =
+          unitHeights.length > 0
+            ? Math.max(...unitHeights)
+            : building.clearHeight ?? 0;
+
+        if (maxHeight > 0) {
+          if (maxHeight >= request.minHeight) {
+            heightScore = 100;
+          } else {
+            const shortfall = (request.minHeight - maxHeight) / request.minHeight;
+            heightScore = shortfall <= 0.2 ? Math.round((1 - shortfall * 3) * 100) : 0;
+          }
         } else {
-          availabilityScore = 0;
+          heightScore = 30;
         }
       }
 
-      const score = Math.round(
-        sqmScore * 0.35 + locationScore * 0.4 + availabilityScore * 0.25,
-      );
+      // ── Weighted total: sqm 40% + location 40% + height 20% ──
+      const score = request.minHeight
+        ? Math.round(sqmScore * 0.4 + locationScore * 0.4 + heightScore * 0.2)
+        : Math.round(sqmScore * 0.5 + locationScore * 0.5);
+
+      // Compute max height from matched units for display
+      const unitHeightsForDisplay = matchedUnits
+        .map((u) => u.usefulHeight)
+        .filter((h): h is number => h != null && h > 0);
+      const displayHeight =
+        unitHeightsForDisplay.length > 0
+          ? Math.max(...unitHeightsForDisplay)
+          : building.clearHeight ?? null;
 
       return {
         building: {
           id: building.id,
           name: building.name,
           address: building.address,
-          availableSqm: building.availableSqm,
+          availableSqm: effectiveSqm ?? building.availableSqm,
           transactionType: building.transactionType,
           serviceCharge: building.serviceCharge,
           availableFrom: building.availableFrom,
+          clearHeight: displayHeight,
           location: building.location,
           latitude: building.latitude,
           longitude: building.longitude,
+          unitsCount: matchedUnits.length,
+          totalDocks: matchedUnits.reduce((sum, u) => sum + (u.docks || 0), 0),
         },
         score,
         breakdown: {
           sqm: sqmScore,
           location: locationScore,
-          availability: availabilityScore,
+          height: heightScore,
         },
       };
     });
 
     return results
-      .filter((r) => r.score >= 40)
+      .filter((r): r is NonNullable<typeof r> => r != null && r.score >= 30)
       .sort((a, b) => b.score - a.score);
   }
 
@@ -501,6 +636,31 @@ export class RequestsService {
     }
 
     return { deals: createdDeals, count: createdDeals.length };
+  }
+
+  async reassign(id: number, newUserId: number, adminUserId: number) {
+    const request = await this.findOne(id);
+    const oldUserId = request.userId;
+
+    const updated = await this.prisma.propertyRequest.update({
+      where: { id },
+      data: { userId: newUserId },
+      include: {
+        company: true,
+        person: true,
+        user: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        locations: true,
+      },
+    });
+
+    await this.auditService.log('REASSIGN', 'DEAL', id, adminUserId, {
+      fromUserId: oldUserId,
+      toUserId: newUserId,
+    });
+
+    return updated;
   }
 
   /**

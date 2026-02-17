@@ -7,17 +7,22 @@ import { UpdateCompanyDto } from './dto/update-company.dto';
 export class CompaniesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(page: number = 1, limit: number = 20) {
+  async findAll(page: number = 1, limit: number = 20, agencyId?: number | null) {
     const skip = (page - 1) * limit;
+    const where: Record<string, unknown> = {};
+    if (agencyId) {
+      where.user = { agencyId };
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.company.findMany({
+        where,
         skip,
         take: limit,
         include: { user: { select: { id: true, firstName: true, lastName: true } } },
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.company.count(),
+      this.prisma.company.count({ where }),
     ]);
 
     return {
@@ -79,12 +84,16 @@ export class CompaniesService {
     });
   }
 
-  async filter(name: string, page: number = 1, limit: number = 20) {
+  async filter(name: string, page: number = 1, limit: number = 20, agencyId?: number | null) {
     const skip = (page - 1) * limit;
 
-    const where = {
+    const where: Record<string, unknown> = {
       name: { contains: name, mode: 'insensitive' as const },
     };
+
+    if (agencyId) {
+      where.user = { agencyId };
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.company.findMany({

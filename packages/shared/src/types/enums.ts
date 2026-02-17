@@ -1,6 +1,12 @@
 export enum Role {
+  PLATFORM_ADMIN = 'PLATFORM_ADMIN',
   ADMIN = 'ADMIN',
   BROKER = 'BROKER',
+}
+
+export enum AgencyStatus {
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
 }
 
 export enum TransactionType {
