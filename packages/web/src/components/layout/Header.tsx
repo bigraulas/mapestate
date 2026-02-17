@@ -1,6 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Search,
   Bell,
   ChevronRight,
   LogOut,
@@ -99,16 +98,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1.5 md:gap-3">
-        {/* Search - hidden on mobile */}
-        <button className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-400 hover:border-slate-300 hover:text-slate-500 transition-colors">
-          <Search className="w-4 h-4" />
-          <span>Cauta...</span>
-          <kbd className="inline-flex items-center gap-0.5 rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-2xs text-slate-400 font-mono">
-            <span>Ctrl</span>
-            <span>K</span>
-          </kbd>
-        </button>
-
         {/* Notifications */}
         <button className="relative p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors">
           <Bell className="w-5 h-5" />
