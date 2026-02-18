@@ -37,7 +37,6 @@ interface UnitForm {
   floorLoading: string;
   lighting: string;
   // Commercial specs
-  serviceCharge: string;
   availableFrom: string;
   contractLength: string;
   expandingPossibilities: string;
@@ -71,7 +70,6 @@ function unitToForm(u?: Unit | null): UnitForm {
       gridFormat: '',
       floorLoading: '',
       lighting: '',
-      serviceCharge: '',
       availableFrom: '',
       contractLength: '',
       expandingPossibilities: '',
@@ -103,7 +101,6 @@ function unitToForm(u?: Unit | null): UnitForm {
     gridFormat: u.gridFormat ?? '',
     floorLoading: u.floorLoading?.toString() ?? '',
     lighting: u.lighting ?? '',
-    serviceCharge: u.serviceCharge?.toString() ?? '',
     availableFrom: u.availableFrom ? u.availableFrom.split('T')[0] : '',
     contractLength: u.contractLength ?? '',
     expandingPossibilities: u.expandingPossibilities ?? '',
@@ -156,7 +153,6 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
     floorLoading: form.floorLoading ? parseFloat(form.floorLoading) : undefined,
     lighting: form.lighting || undefined,
     // Commercial specs
-    serviceCharge: form.serviceCharge ? parseFloat(form.serviceCharge) : undefined,
     availableFrom: form.availableFrom ? new Date(form.availableFrom).toISOString() : undefined,
     contractLength: form.contractLength || undefined,
     expandingPossibilities: form.expandingPossibilities || undefined,
@@ -566,51 +562,40 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
             </button>
             {showCommercial && (
               <div className="mt-3 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="label">Service charge (EUR/mp/luna)</label>
-                    <input
-                      type="number"
-                      value={form.serviceCharge}
-                      onChange={(e) => update('serviceCharge', e.target.value)}
-                      className="input"
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Disponibilitate</label>
-                    <input
-                      type="date"
-                      value={form.availableFrom}
-                      onChange={(e) => update('availableFrom', e.target.value)}
-                      className="input"
-                    />
-                  </div>
+                <div>
+                  <label className="label">Disponibilitate</label>
+                  <input
+                    type="date"
+                    value={form.availableFrom}
+                    onChange={(e) => update('availableFrom', e.target.value)}
+                    className="input"
+                  />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="label">Durata contract</label>
-                    <input
-                      type="text"
-                      value={form.contractLength}
-                      onChange={(e) => update('contractLength', e.target.value)}
-                      className="input"
-                      placeholder="ex: 6 months + 5 years"
-                    />
+                {/* Hide contract duration & expansion when sale-only */}
+                {!(form.salePrice && !form.warehousePrice && !form.officePrice) && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">Durata contract</label>
+                      <input
+                        type="text"
+                        value={form.contractLength}
+                        onChange={(e) => update('contractLength', e.target.value)}
+                        className="input"
+                        placeholder="ex: 6 months + 5 years"
+                      />
+                    </div>
+                    <div>
+                      <label className="label">Posibilitati extindere</label>
+                      <input
+                        type="text"
+                        value={form.expandingPossibilities}
+                        onChange={(e) => update('expandingPossibilities', e.target.value)}
+                        className="input"
+                        placeholder="ex: yes, within the park"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="label">Posibilitati extindere</label>
-                    <input
-                      type="text"
-                      value={form.expandingPossibilities}
-                      onChange={(e) => update('expandingPossibilities', e.target.value)}
-                      className="input"
-                      placeholder="ex: yes, within the park"
-                    />
-                  </div>
-                </div>
+                )}
               </div>
             )}
           </div>

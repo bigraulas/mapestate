@@ -9,8 +9,8 @@ import {
   MapPin,
   Crosshair,
 } from 'lucide-react';
-import type { Building } from '@mapestate/shared';
-import { buildingsService } from '@/services';
+import type { Building, Company } from '@mapestate/shared';
+import { buildingsService, companiesService } from '@/services';
 import { MapboxMap } from '@/components/map';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -55,6 +55,8 @@ interface FormData {
   ownerName: string;
   ownerPhone: string;
   ownerEmail: string;
+  propertyType: 'individual' | 'developer';
+  developerId: string;
 }
 
 const INITIAL_FORM: FormData = {
@@ -65,6 +67,8 @@ const INITIAL_FORM: FormData = {
   ownerName: '',
   ownerPhone: '',
   ownerEmail: '',
+  propertyType: 'individual',
+  developerId: '',
 };
 
 export default function BuildingFormPage() {
@@ -79,6 +83,10 @@ export default function BuildingFormPage() {
   const [loadingBuilding, setLoadingBuilding] = useState(false);
   const [showMap, setShowMap] = useState(true);
 
+  // Developer companies
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+
   // Address autocomplete
   const [suggestions, setSuggestions] = useState<GeoFeature[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -87,6 +95,20 @@ export default function BuildingFormPage() {
 
   // Map
   const [flyTo, setFlyTo] = useState<{ lng: number; lat: number; zoom?: number } | null>(null);
+
+  // Load companies for developer selector
+  useEffect(() => {
+    if (form.propertyType !== 'developer' || companies.length > 0) return;
+    setLoadingCompanies(true);
+    companiesService
+      .getAll({ page: 1, limit: 200 })
+      .then((res) => {
+        const data = res.data?.data ?? res.data ?? [];
+        setCompanies(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingCompanies(false));
+  }, [form.propertyType, companies.length]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -135,6 +157,8 @@ export default function BuildingFormPage() {
           ownerName: b.ownerName ?? '',
           ownerPhone: b.ownerPhone ?? '',
           ownerEmail: b.ownerEmail ?? '',
+          propertyType: b.developerId ? 'developer' : 'individual',
+          developerId: b.developerId?.toString() ?? '',
         });
       })
       .catch(() => setError('Nu s-a putut incarca proprietatea.'))
@@ -192,6 +216,9 @@ export default function BuildingFormPage() {
       ownerName: form.ownerName || undefined,
       ownerPhone: form.ownerPhone || undefined,
       ownerEmail: form.ownerEmail || undefined,
+      developerId: form.propertyType === 'developer' && form.developerId
+        ? parseInt(form.developerId, 10)
+        : null,
     };
 
     try {
@@ -330,6 +357,58 @@ export default function BuildingFormPage() {
               />
             </div>
           </div>
+        </div>
+
+        {/* Property Type */}
+        <div className="card card-body space-y-4">
+          <h3 className="text-sm font-semibold text-slate-900">Tip proprietate</h3>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="propertyType"
+                value="individual"
+                checked={form.propertyType === 'individual'}
+                onChange={() => updateField('propertyType', 'individual')}
+                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm text-slate-700">Individual</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="propertyType"
+                value="developer"
+                checked={form.propertyType === 'developer'}
+                onChange={() => updateField('propertyType', 'developer')}
+                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm text-slate-700">Developer</span>
+            </label>
+          </div>
+          {form.propertyType === 'developer' && (
+            <div>
+              <label className="label">Developer (companie)</label>
+              {loadingCompanies ? (
+                <div className="flex items-center gap-2 text-sm text-slate-400 py-2">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Se incarca...
+                </div>
+              ) : (
+                <select
+                  value={form.developerId}
+                  onChange={(e) => updateField('developerId', e.target.value)}
+                  className="input"
+                >
+                  <option value="">Selecteaza developer...</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Map */}

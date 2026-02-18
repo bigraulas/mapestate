@@ -147,10 +147,12 @@ export class BuildingsService {
   }
 
   async create(dto: CreateBuildingDto, userId: number) {
-    const { ...rest } = dto;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { transactionType, propertyType, ...rest } = dto as unknown as Record<string, unknown>;
+    const buildingData = rest as Omit<CreateBuildingDto, 'transactionType' | 'propertyType'>;
     const building = await this.prisma.building.create({
       data: {
-        ...rest,
+        ...buildingData,
         userId,
         polygonPoints: dto.polygonPoints
           ? (dto.polygonPoints as Prisma.InputJsonValue)
@@ -188,7 +190,7 @@ export class BuildingsService {
   async update(id: number, dto: UpdateBuildingDto, userId?: number) {
     await this.findOne(id);
 
-    const { transactionType: _tt, ...dtoRest } = dto as Record<string, unknown>;
+    const { transactionType: _tt, propertyType: _pt, ...dtoRest } = dto as Record<string, unknown>;
     const data: Record<string, unknown> = { ...dtoRest };
 
     if (dto.polygonPoints !== undefined) {

@@ -132,4 +132,12 @@ export class CreateBuildingDto {
   @IsNumber()
   @IsOptional()
   developerId?: number;
+
+  @IsString()
+  @IsOptional()
+  transactionType?: string;
+
+  @IsString()
+  @IsOptional()
+  propertyType?: string;
 }

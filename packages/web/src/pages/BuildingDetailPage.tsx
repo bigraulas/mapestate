@@ -24,6 +24,7 @@ import { buildingsService, unitsService } from '@/services';
 import { usersService } from '@/services/users.service';
 import { MapboxMap } from '@/components/map';
 import UnitFormPanel from '@/components/units/UnitFormPanel';
+import UnitQuickAdd from '@/components/units/UnitQuickAdd';
 import { useAuth } from '@/hooks/useAuth';
 import Modal from '@/components/shared/Modal';
 import toast from 'react-hot-toast';
@@ -36,6 +37,7 @@ export default function BuildingDetailPage() {
   const [loading, setLoading] = useState(true);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [showUnitForm, setShowUnitForm] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [expandedUnit, setExpandedUnit] = useState<number | null>(null);
 
   const { isAdmin } = useAuth();
@@ -193,11 +195,6 @@ export default function BuildingDetailPage() {
                     Disponibil: <span className="font-medium">{building.availableSqm.toLocaleString('ro-RO')} mp</span>
                   </p>
                 )}
-                {building.serviceCharge != null && (
-                  <p className="text-sm text-slate-600 mb-1">
-                    Service charge: <span className="font-medium">{building.serviceCharge.toFixed(2)} EUR/mp</span>
-                  </p>
-                )}
                 {building.description && (
                   <p className="text-sm text-slate-500 mt-3">{building.description}</p>
                 )}
@@ -250,10 +247,8 @@ export default function BuildingDetailPage() {
                 Spatii ({units.length})
               </h3>
               <button
-                onClick={() => {
-                  setEditingUnit(null);
-                  setShowUnitForm(true);
-                }}
+                onClick={() => setShowQuickAdd(true)}
+                disabled={showQuickAdd}
                 className="btn-primary !py-1.5 !px-3 !text-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -265,10 +260,7 @@ export default function BuildingDetailPage() {
               <div className="px-5 py-8 text-center">
                 <p className="text-sm text-slate-400">Niciun spatiu adaugat inca.</p>
                 <button
-                  onClick={() => {
-                    setEditingUnit(null);
-                    setShowUnitForm(true);
-                  }}
+                  onClick={() => setShowQuickAdd(true)}
                   className="mt-2 text-sm text-primary-600 hover:underline"
                 >
                   Adauga primul spatiu
@@ -330,6 +322,7 @@ export default function BuildingDetailPage() {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
+                              setShowQuickAdd(false);
                               setEditingUnit(unit);
                               setShowUnitForm(true);
                             }}
@@ -437,6 +430,25 @@ export default function BuildingDetailPage() {
                   );
                 })}
               </div>
+            )}
+
+            {showQuickAdd && (
+              <UnitQuickAdd
+                buildingId={parseInt(id!, 10)}
+                onSaved={async (openDetails) => {
+                  await fetchData();
+                  if (openDetails) {
+                    setShowQuickAdd(false);
+                    const uRes = await unitsService.getByBuilding(parseInt(id!, 10));
+                    const freshUnits = Array.isArray(uRes.data) ? uRes.data : [];
+                    if (freshUnits.length > 0) {
+                      setEditingUnit(freshUnits[0]);
+                      setShowUnitForm(true);
+                    }
+                  }
+                }}
+                onCancel={() => setShowQuickAdd(false)}
+              />
             )}
           </div>
         </div>
