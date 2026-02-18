@@ -14,6 +14,9 @@ import {
   Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Role } from '@prisma/client';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { CompaniesService } from './companies.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
@@ -29,7 +32,8 @@ export class CompaniesController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    return this.companiesService.findAll(page, limit, req.user.agencyId);
+    const effectiveUserId = this.resolveUserId(req.user);
+    return this.companiesService.findAll(page, limit, effectiveUserId, req.user.agencyId);
   }
 
   @Get('lookup-cui/:cui')
@@ -70,7 +74,8 @@ export class CompaniesController {
     @Body('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Body('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    return this.companiesService.filter(name, page, limit, req.user.agencyId);
+    const effectiveUserId = this.resolveUserId(req.user);
+    return this.companiesService.filter(name, page, limit, effectiveUserId, req.user.agencyId);
   }
 
   @Post(':id/logo')
@@ -79,5 +84,33 @@ export class CompaniesController {
     @Body('logo') logo: string,
   ) {
     return this.companiesService.updateLogo(id, logo);
+  }
+
+  @Patch(':id/reassign')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  reassign(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('userId', ParseIntPipe) newUserId: number,
+  ) {
+    return this.companiesService.reassign(id, newUserId);
+  }
+
+  @Post('bulk-reassign')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  bulkReassign(
+    @Req() req: any,
+    @Body('fromUserId', ParseIntPipe) fromUserId: number,
+    @Body('toUserId', ParseIntPipe) toUserId: number,
+  ) {
+    return this.companiesService.bulkReassign(fromUserId, toUserId, req.user.agencyId);
+  }
+
+  private resolveUserId(user: { id: number; role: string }): number | null {
+    if (user.role === 'ADMIN' || user.role === 'PLATFORM_ADMIN') {
+      return null;
+    }
+    return user.id;
   }
 }

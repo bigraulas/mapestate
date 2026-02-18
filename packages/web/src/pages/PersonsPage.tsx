@@ -12,12 +12,14 @@ import {
   Phone,
 } from 'lucide-react';
 import type { Person, Company, Label, PaginatedResponse } from '@mapestate/shared';
-import { personsService, companiesService, labelsService } from '@/services';
+import { personsService, companiesService, labelsService, usersService } from '@/services';
+import { useAuth } from '@/hooks/useAuth';
 import DataTable, { type Column } from '@/components/shared/DataTable';
 import Pagination from '@/components/shared/Pagination';
 import Modal from '@/components/shared/Modal';
 
 export default function PersonsPage() {
+  const { isAdmin } = useAuth();
   const [persons, setPersons] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -27,6 +29,8 @@ export default function PersonsPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [expandedPerson, setExpandedPerson] = useState<Person | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [reassigning, setReassigning] = useState(false);
+  const [agencyUsers, setAgencyUsers] = useState<{id: number; firstName: string; lastName: string}[]>([]);
 
   // Form modal
   const [showForm, setShowForm] = useState(false);
@@ -106,6 +110,12 @@ export default function PersonsPage() {
       return;
     }
     setExpandedId(person.id);
+    if (isAdmin && agencyUsers.length === 0) {
+      try {
+        const usersRes = await usersService.getAll(1, 100);
+        setAgencyUsers(usersRes.data?.data ?? []);
+      } catch { /* ignore */ }
+    }
     setLoadingDetail(true);
     try {
       const res = await personsService.getById(person.id);
@@ -251,6 +261,14 @@ export default function PersonsPage() {
         </span>
       ),
     },
+    ...(isAdmin ? [{
+      key: 'user' as keyof Person,
+      header: 'Agent',
+      render: (row: Person) => {
+        const u = (row as unknown as Record<string, unknown>).user as {firstName?: string; lastName?: string} | null | undefined;
+        return u ? `${u.firstName} ${u.lastName}` : '-';
+      },
+    }] : []),
   ];
 
   return (
@@ -372,6 +390,36 @@ export default function PersonsPage() {
                   </div>
                 ) : (
                   <span className="text-xs text-slate-400">Nu s-au putut incarca detaliile.</span>
+                )}
+                {isAdmin && (
+                  <div className="mt-3 pt-3 border-t border-slate-200 flex items-center gap-3">
+                    <span className="text-xs text-slate-500 font-medium">Reasigneaza la:</span>
+                    <select
+                      className="input !py-1 !text-xs w-48"
+                      defaultValue=""
+                      onChange={async (e) => {
+                        const newUserId = parseInt(e.target.value, 10);
+                        if (!newUserId) return;
+                        setReassigning(true);
+                        try {
+                          await personsService.reassign(row.id, newUserId);
+                          fetchPersons(page);
+                          setExpandedId(null);
+                          setExpandedPerson(null);
+                        } catch { /* ignore */ }
+                        setReassigning(false);
+                      }}
+                      disabled={reassigning}
+                    >
+                      <option value="">-- Selecteaza agent --</option>
+                      {agencyUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.firstName} {u.lastName}
+                        </option>
+                      ))}
+                    </select>
+                    {reassigning && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
+                  </div>
                 )}
               </div>
             );

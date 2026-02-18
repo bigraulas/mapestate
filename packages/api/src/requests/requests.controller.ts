@@ -30,10 +30,12 @@ export class RequestsController {
 
   @Get()
   findAll(
+    @Req() req: any,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    return this.requestsService.findAll(page, limit);
+    const effectiveUserId = this.resolveUserId(req.user);
+    return this.requestsService.findMyRequests(effectiveUserId, page, limit, req.user.agencyId);
   }
 
   @Get('my')
@@ -104,8 +106,10 @@ export class RequestsController {
     @Body() filters: Record<string, unknown>,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Req() req: any,
   ) {
-    return this.requestsService.filter(filters, page, limit);
+    const effectiveUserId = this.resolveUserId(req.user);
+    return this.requestsService.filter(filters, page, limit, effectiveUserId, req.user.agencyId);
   }
 
   @Patch(':id/status')

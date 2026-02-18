@@ -14,6 +14,9 @@ import {
   Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Role } from '@prisma/client';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { PersonsService } from './persons.service';
 import { CreatePersonDto } from './dto/create-person.dto';
 import { UpdatePersonDto } from './dto/update-person.dto';
@@ -29,12 +32,14 @@ export class PersonsController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    return this.personsService.findAll(page, limit, req.user.agencyId);
+    const effectiveUserId = this.resolveUserId(req.user);
+    return this.personsService.findAll(page, limit, effectiveUserId, req.user.agencyId);
   }
 
   @Get('search')
   search(@Req() req: any, @Query('q') query: string) {
-    return this.personsService.search(query || '', req.user.agencyId);
+    const effectiveUserId = this.resolveUserId(req.user);
+    return this.personsService.search(query || '', effectiveUserId, req.user.agencyId);
   }
 
   @Get(':id')
@@ -69,5 +74,33 @@ export class PersonsController {
     @Body('companyId', ParseIntPipe) companyId: number,
   ) {
     return this.personsService.assignCompany(id, companyId);
+  }
+
+  @Patch(':id/reassign')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  reassign(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('userId', ParseIntPipe) newUserId: number,
+  ) {
+    return this.personsService.reassign(id, newUserId);
+  }
+
+  @Post('bulk-reassign')
+  @UseGuards(RolesGuard)
+  @Roles(Role.ADMIN)
+  bulkReassign(
+    @Req() req: any,
+    @Body('fromUserId', ParseIntPipe) fromUserId: number,
+    @Body('toUserId', ParseIntPipe) toUserId: number,
+  ) {
+    return this.personsService.bulkReassign(fromUserId, toUserId, req.user.agencyId);
+  }
+
+  private resolveUserId(user: { id: number; role: string }): number | null {
+    if (user.role === 'ADMIN' || user.role === 'PLATFORM_ADMIN') {
+      return null;
+    }
+    return user.id;
   }
 }

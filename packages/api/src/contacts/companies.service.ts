@@ -7,9 +7,9 @@ import { UpdateCompanyDto } from './dto/update-company.dto';
 export class CompaniesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(page: number = 1, limit: number = 20, agencyId?: number | null) {
+  async findAll(page: number = 1, limit: number = 20, userId: number | null = null, agencyId?: number | null) {
     const skip = (page - 1) * limit;
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = userId != null ? { userId } : {};
     if (agencyId) {
       where.user = { agencyId };
     }
@@ -84,13 +84,16 @@ export class CompaniesService {
     });
   }
 
-  async filter(name: string, page: number = 1, limit: number = 20, agencyId?: number | null) {
+  async filter(name: string, page: number = 1, limit: number = 20, userId: number | null = null, agencyId?: number | null) {
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = {
       name: { contains: name, mode: 'insensitive' as const },
     };
 
+    if (userId != null) {
+      where.userId = userId;
+    }
     if (agencyId) {
       where.user = { agencyId };
     }
@@ -153,5 +156,22 @@ export class CompaniesService {
       where: { id },
       data: { logo },
     });
+  }
+
+  async reassign(id: number, newUserId: number) {
+    await this.findOne(id);
+    return this.prisma.company.update({
+      where: { id },
+      data: { userId: newUserId },
+      include: { user: { select: { id: true, firstName: true, lastName: true } } },
+    });
+  }
+
+  async bulkReassign(fromUserId: number, toUserId: number, agencyId: number) {
+    const result = await this.prisma.company.updateMany({
+      where: { userId: fromUserId, user: { agencyId } },
+      data: { userId: toUserId },
+    });
+    return { count: result.count };
   }
 }

@@ -13,7 +13,7 @@ import { randomUUID } from 'crypto';
 import { CreateOfferDto } from './dto/create-offer.dto';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
-import { SendOffersDto } from './dto/send-offers.dto';
+import { SendOffersDto, BuildingOverrideDto } from './dto/send-offers.dto';
 
 @Injectable()
 export class OffersService {
@@ -24,9 +24,9 @@ export class OffersService {
     private readonly auditService: AuditService,
   ) {}
 
-  async findAll(page: number = 1, limit: number = 20, agencyId?: number | null) {
+  async findAll(page: number = 1, limit: number = 20, userId: number | null = null, agencyId?: number | null) {
     const skip = (page - 1) * limit;
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = userId != null ? { userId } : {};
     if (agencyId) {
       where.user = { agencyId };
     }
@@ -235,10 +235,10 @@ export class OffersService {
       createdOffers.push({ offer, building });
     }
 
-    // Generate PDF for attachment
+    // Generate PDF for attachment (with price overrides if provided)
     let pdfBuffer: Buffer | undefined;
     try {
-      pdfBuffer = await this.generatePdf(dto.dealId, dto.buildingIds);
+      pdfBuffer = await this.generatePdf(dto.dealId, dto.buildingIds, dto.buildingOverrides);
     } catch {
       // PDF generation failure shouldn't block email sending
     }
@@ -296,7 +296,7 @@ export class OffersService {
     };
   }
 
-  async generatePdf(dealId: number, buildingIds?: number[]): Promise<Buffer> {
+  async generatePdf(dealId: number, buildingIds?: number[], buildingOverrides?: BuildingOverrideDto[]): Promise<Buffer> {
     const deal = await this.prisma.propertyRequest.findUnique({
       where: { id: dealId },
       include: {
@@ -392,6 +392,26 @@ export class OffersService {
       throw new BadRequestException('No buildings found for this deal');
     }
 
+    // Apply price overrides to building units (in-memory only, not persisted)
+    if (buildingOverrides && buildingOverrides.length > 0) {
+      const overrideMap = new Map(buildingOverrides.map((o) => [o.buildingId, o]));
+      for (const building of buildings) {
+        const override = overrideMap.get(building.id);
+        if (!override) continue;
+        for (const unit of building.units || []) {
+          if (override.rentPrice != null) {
+            const ws = unit.warehouseSpace as { sqm?: number; rentPrice?: number } | null;
+            if (ws?.sqm) {
+              (unit as any).warehouseSpace = { ...ws, rentPrice: override.rentPrice };
+            }
+          }
+          if (override.serviceCharge != null) {
+            (unit as any).serviceCharge = override.serviceCharge;
+          }
+        }
+      }
+    }
+
     return this.pdfGenerator.generate(
       {
         name: deal.name,
@@ -410,8 +430,8 @@ export class OffersService {
 
   private readonly sharedPdfDir = path.join(process.cwd(), 'uploads', 'shared-pdfs');
 
-  async createSharedPdf(dealId: number, buildingIds?: number[]): Promise<string> {
-    const pdfBuffer = await this.generatePdf(dealId, buildingIds);
+  async createSharedPdf(dealId: number, buildingIds?: number[], buildingOverrides?: BuildingOverrideDto[]): Promise<string> {
+    const pdfBuffer = await this.generatePdf(dealId, buildingIds, buildingOverrides);
 
     // Ensure directory exists
     if (!fs.existsSync(this.sharedPdfDir)) {

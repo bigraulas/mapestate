@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { offersService } from '@/services/offers.service';
 import { requestsService } from '@/services/requests.service';
+import { useAuth } from '@/hooks/useAuth';
 import DataTable, { type Column } from '@/components/shared/DataTable';
 import Pagination from '@/components/shared/Pagination';
 import Modal from '@/components/shared/Modal';
@@ -29,6 +30,7 @@ interface OfferRow {
   } | null;
   company?: { id: number; name: string } | null;
   offerGroups?: { id: number }[];
+  user?: { id: number; firstName: string; lastName: string; email?: string } | null;
 }
 
 interface RequestOption {
@@ -42,6 +44,7 @@ interface RequestOption {
 // ---------------------------------------------------------------------------
 
 export default function OffersPage() {
+  const { isAdmin } = useAuth();
   const [rows, setRows] = useState<OfferRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -174,6 +177,14 @@ export default function OffersPage() {
       header: 'Nr. Grupuri',
       render: (r) => r.offerGroups?.length ?? 0,
     },
+    ...(isAdmin ? [{
+      key: 'user' as keyof OfferRow,
+      header: 'Agent',
+      render: (r: OfferRow) => {
+        const u = r.user;
+        return u ? `${u.firstName} ${u.lastName}` : '-';
+      },
+    }] : []),
   ];
 
   // ----- Render -----

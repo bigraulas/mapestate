@@ -19,4 +19,10 @@ export const companiesService = {
 
   lookupCui: (cui: string) =>
     api.get(`/contacts/companies/lookup-cui/${encodeURIComponent(cui)}`),
+
+  reassign: (id: number, userId: number) =>
+    api.patch(`/contacts/companies/${id}/reassign`, { userId }),
+
+  bulkReassign: (fromUserId: number, toUserId: number) =>
+    api.post('/contacts/companies/bulk-reassign', { fromUserId, toUserId }),
 };

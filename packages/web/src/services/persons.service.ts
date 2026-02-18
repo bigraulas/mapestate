@@ -16,4 +16,10 @@ export const personsService = {
     api.patch(`/contacts/persons/${id}`, data),
 
   delete: (id: number) => api.delete(`/contacts/persons/${id}`),
+
+  reassign: (id: number, userId: number) =>
+    api.patch(`/contacts/persons/${id}/reassign`, { userId }),
+
+  bulkReassign: (fromUserId: number, toUserId: number) =>
+    api.post('/contacts/persons/bulk-reassign', { fromUserId, toUserId }),
 };

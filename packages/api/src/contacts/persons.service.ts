@@ -7,9 +7,9 @@ import { UpdatePersonDto } from './dto/update-person.dto';
 export class PersonsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(page: number = 1, limit: number = 20, agencyId?: number | null) {
+  async findAll(page: number = 1, limit: number = 20, userId: number | null = null, agencyId?: number | null) {
     const skip = (page - 1) * limit;
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = userId != null ? { userId } : {};
     if (agencyId) {
       where.user = { agencyId };
     }
@@ -93,16 +93,21 @@ export class PersonsService {
     });
   }
 
-  async search(query: string, agencyId?: number | null) {
+  async search(query: string, userId: number | null = null, agencyId?: number | null) {
     const orConditions = [
       { name: { contains: query, mode: 'insensitive' as const } },
       { emails: { array_contains: query } },
       { phones: { array_contains: query } },
     ];
 
-    const where: Record<string, unknown> = agencyId
-      ? { AND: [{ user: { agencyId } }, { OR: orConditions }] }
-      : { OR: orConditions };
+    const conditions: Record<string, unknown>[] = [];
+    if (userId != null) conditions.push({ userId });
+    if (agencyId) conditions.push({ user: { agencyId } });
+    conditions.push({ OR: orConditions });
+
+    const where: Record<string, unknown> = conditions.length > 1
+      ? { AND: conditions }
+      : conditions[0] || {};
 
     const data = await this.prisma.person.findMany({
       where,
@@ -129,5 +134,26 @@ export class PersonsService {
         user: { select: { id: true, firstName: true, lastName: true } },
       },
     });
+  }
+
+  async reassign(id: number, newUserId: number) {
+    await this.findOne(id);
+    return this.prisma.person.update({
+      where: { id },
+      data: { userId: newUserId },
+      include: {
+        company: true,
+        label: true,
+        user: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+  }
+
+  async bulkReassign(fromUserId: number, toUserId: number, agencyId: number) {
+    const result = await this.prisma.person.updateMany({
+      where: { userId: fromUserId, user: { agencyId } },
+      data: { userId: toUserId },
+    });
+    return { count: result.count };
   }
 }

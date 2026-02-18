@@ -321,9 +321,18 @@ export class RequestsService {
     filters: Record<string, unknown>,
     page: number = 1,
     limit: number = 20,
+    userId: number | null = null,
+    agencyId?: number | null,
   ) {
     const skip = (page - 1) * limit;
     const where: Record<string, unknown> = {};
+
+    if (userId != null) {
+      where.userId = userId;
+    }
+    if (agencyId) {
+      where.user = { agencyId };
+    }
 
     if (filters.status) {
       where.status = filters.status;
@@ -590,6 +599,18 @@ export class RequestsService {
           ? Math.max(...unitHeightsForDisplay)
           : building.clearHeight ?? null;
 
+      // Compute weighted-average warehouse rent price from matched units
+      let whSqm = 0;
+      let whWeightedRent = 0;
+      for (const u of matchedUnits) {
+        const ws = u.warehouseSpace as { sqm?: number; rentPrice?: number } | null;
+        if (ws?.sqm && ws.sqm > 0) {
+          whWeightedRent += (ws.rentPrice || 0) * ws.sqm;
+          whSqm += ws.sqm;
+        }
+      }
+      const rentPrice = whSqm > 0 ? Math.round((whWeightedRent / whSqm) * 100) / 100 : null;
+
       return {
         building: {
           id: building.id,
@@ -598,6 +619,7 @@ export class RequestsService {
           availableSqm: effectiveSqm ?? building.availableSqm,
           transactionType: building.transactionType,
           serviceCharge: building.serviceCharge,
+          rentPrice,
           availableFrom: building.availableFrom,
           clearHeight: displayHeight,
           location: building.location,

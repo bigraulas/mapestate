@@ -54,10 +54,26 @@ export class OffersController {
   @UseGuards(AuthGuard('jwt'))
   async createPdfLink(
     @Param('dealId', ParseIntPipe) dealId: number,
-    @Body() body: { buildingIds?: number[] },
+    @Body() body: { buildingIds?: number[]; buildingOverrides?: any[] },
   ) {
-    const token = await this.offersService.createSharedPdf(dealId, body.buildingIds);
+    const token = await this.offersService.createSharedPdf(dealId, body.buildingIds, body.buildingOverrides);
     return { token };
+  }
+
+  @Post('deal/:dealId/pdf')
+  @UseGuards(AuthGuard('jwt'))
+  async generatePdfWithOverrides(
+    @Param('dealId', ParseIntPipe) dealId: number,
+    @Body() body: { buildingIds?: number[]; buildingOverrides?: any[] },
+    @Res() res: any,
+  ) {
+    const pdfBuffer = await this.offersService.generatePdf(dealId, body.buildingIds, body.buildingOverrides);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'attachment; filename="oferta-' + dealId + '.pdf"',
+      'Content-Length': pdfBuffer.length,
+    });
+    res.end(pdfBuffer);
   }
 
   @Get('deal/:dealId/pdf')
@@ -93,7 +109,8 @@ export class OffersController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    return this.offersService.findAll(page, limit, req.user.agencyId);
+    const effectiveUserId = this.resolveUserId(req.user);
+    return this.offersService.findAll(page, limit, effectiveUserId, req.user.agencyId);
   }
 
   @Get(':id')
@@ -157,5 +174,12 @@ export class OffersController {
   @UseGuards(AuthGuard('jwt'))
   removeGroup(@Param('groupId', ParseIntPipe) groupId: number) {
     return this.offersService.removeGroup(groupId);
+  }
+
+  private resolveUserId(user: { id: number; role: string }): number | null {
+    if (user.role === 'ADMIN' || user.role === 'PLATFORM_ADMIN') {
+      return null;
+    }
+    return user.id;
   }
 }
