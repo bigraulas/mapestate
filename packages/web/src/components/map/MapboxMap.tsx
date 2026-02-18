@@ -8,6 +8,8 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 const DEFAULT_CENTER: [number, number] = [25.0, 45.9];
 const DEFAULT_ZOOM = 7;
 
+const isMobile = () => window.innerWidth <= 768;
+
 export interface MapUnit {
   id: number;
   name: string;
@@ -73,7 +75,7 @@ export default function MapboxMap({
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const pickerMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [is3D, setIs3D] = useState(true);
+  const [is3D, setIs3D] = useState(!isMobile());
 
   // Initialize map
   useEffect(() => {
@@ -82,13 +84,14 @@ export default function MapboxMap({
     mapboxgl.accessToken = MAPBOX_TOKEN;
     const container = mapContainer.current;
 
+    const mobile = isMobile();
     map.current = new mapboxgl.Map({
       container,
       style: 'mapbox://styles/mapbox/light-v11',
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
-      pitch: 45,
-      bearing: -17.6,
+      pitch: mobile ? 0 : 45,
+      bearing: mobile ? 0 : -17.6,
     });
 
     const m = map.current;
@@ -100,34 +103,36 @@ export default function MapboxMap({
     });
 
     m.on('load', () => {
-      // 3D buildings
-      const layers = m.getStyle().layers;
-      const labelLayerId = layers?.find(
-        (layer) => layer.type === 'symbol' && layer.layout?.['text-field'],
-      )?.id;
+      // 3D buildings (skip on mobile for performance)
+      if (!mobile) {
+        const layers = m.getStyle().layers;
+        const labelLayerId = layers?.find(
+          (layer) => layer.type === 'symbol' && layer.layout?.['text-field'],
+        )?.id;
 
-      m.addLayer(
-        {
-          id: '3d-buildings',
-          source: 'composite',
-          'source-layer': 'building',
-          filter: ['==', 'extrude', 'true'],
-          type: 'fill-extrusion',
-          minzoom: 12,
-          paint: {
-            'fill-extrusion-color': [
-              'interpolate', ['linear'], ['get', 'height'],
-              0, '#e2e8f0',
-              50, '#94a3b8',
-              200, '#64748b',
-            ],
-            'fill-extrusion-height': ['get', 'height'],
-            'fill-extrusion-base': ['get', 'min_height'],
-            'fill-extrusion-opacity': 0.7,
+        m.addLayer(
+          {
+            id: '3d-buildings',
+            source: 'composite',
+            'source-layer': 'building',
+            filter: ['==', 'extrude', 'true'],
+            type: 'fill-extrusion',
+            minzoom: 12,
+            paint: {
+              'fill-extrusion-color': [
+                'interpolate', ['linear'], ['get', 'height'],
+                0, '#e2e8f0',
+                50, '#94a3b8',
+                200, '#64748b',
+              ],
+              'fill-extrusion-height': ['get', 'height'],
+              'fill-extrusion-base': ['get', 'min_height'],
+              'fill-extrusion-opacity': 0.7,
+            },
           },
-        },
-        labelLayerId,
-      );
+          labelLayerId,
+        );
+      }
 
       setMapLoaded(true);
     });
@@ -172,30 +177,38 @@ export default function MapboxMap({
       `;
 
       // Build units HTML for popup
+      const mobile = isMobile();
+      const MAX_MOBILE_UNITS = 2;
       let unitsHtml = '';
       if (units.length > 0) {
-        const unitItems = units.map((u) => {
+        const visibleUnits = mobile ? units.slice(0, MAX_MOBILE_UNITS) : units;
+        const hiddenCount = mobile ? Math.max(0, units.length - MAX_MOBILE_UNITS) : 0;
+        const unitItems = visibleUnits.map((u) => {
           const prices: string[] = [];
-          if (u.warehousePrice) prices.push(`Hala: ${u.warehousePrice} EUR/mp`);
-          if (u.officePrice) prices.push(`Birou: ${u.officePrice} EUR/mp`);
-          if (u.maintenancePrice) prices.push(`Menten: ${u.maintenancePrice} EUR/mp`);
+          if (u.warehousePrice) prices.push(`Hala: ${u.warehousePrice}€`);
+          if (u.officePrice) prices.push(`Birou: ${u.officePrice}€`);
+          if (u.maintenancePrice) prices.push(`Menten: ${u.maintenancePrice}€`);
           const priceStr = prices.length > 0 ? prices.join(' · ') : 'Pret nesetat';
           return `
-            <div style="padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
-              <div style="font-size: 13px; font-weight: 600; color: #1e293b;">${u.name}</div>
-              <div style="font-size: 11px; color: #64748b; margin-top: 2px;">${priceStr}</div>
+            <div style="padding: ${mobile ? '4px' : '6px'} 0; border-bottom: 1px solid #f1f5f9;">
+              <div style="font-size: ${mobile ? '11px' : '13px'}; font-weight: 600; color: #1e293b;">${u.name}</div>
+              <div style="font-size: ${mobile ? '10px' : '11px'}; color: #64748b; margin-top: 1px;">${priceStr}</div>
             </div>
           `;
         }).join('');
+        const moreHtml = hiddenCount > 0
+          ? `<div style="font-size: 10px; color: #3b82f6; font-weight: 600; padding-top: 3px;">+${hiddenCount} spatii</div>`
+          : '';
         unitsHtml = `
-          <div style="margin-bottom: 10px;">
-            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 4px;">
-              Spatii disponibile (${units.length})
+          <div style="margin-bottom: ${mobile ? '6px' : '10px'};">
+            <div style="font-size: ${mobile ? '9px' : '10px'}; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: ${mobile ? '2px' : '4px'};">
+              Spatii (${units.length})
             </div>
             ${unitItems}
+            ${moreHtml}
           </div>
         `;
-      } else {
+      } else if (!mobile) {
         unitsHtml = `
           <div style="padding: 8px 10px; background: #f8fafc; border-radius: 8px; margin-bottom: 10px; text-align: center;">
             <span style="font-size: 12px; color: #94a3b8;">Niciun spatiu adaugat</span>
@@ -221,10 +234,10 @@ export default function MapboxMap({
       `;
 
       const popup = new mapboxgl.Popup({
-        offset: 25,
+        offset: mobile ? 15 : 25,
         closeButton: true,
         closeOnClick: false,
-        maxWidth: '300px',
+        maxWidth: mobile ? '220px' : '300px',
         className: 'mapbox-popup-custom',
       }).setHTML(popupContent);
 
@@ -246,10 +259,10 @@ export default function MapboxMap({
       el.addEventListener('click', () => {
         map.current?.flyTo({
           center: [building.longitude!, building.latitude!],
-          zoom: 15,
-          pitch: 60,
-          bearing: Math.random() * 60 - 30,
-          duration: 2000,
+          zoom: mobile ? 14 : 15,
+          pitch: mobile ? 0 : 60,
+          bearing: mobile ? 0 : Math.random() * 60 - 30,
+          duration: mobile ? 1200 : 2000,
           essential: true,
         });
       });
@@ -259,13 +272,16 @@ export default function MapboxMap({
 
     // Fit to all markers
     if (validBuildings.length > 0) {
+      const mob = isMobile();
       const bounds = new mapboxgl.LngLatBounds();
       validBuildings.forEach((b) => bounds.extend([b.longitude!, b.latitude!]));
       map.current.fitBounds(bounds, {
-        padding: { top: 80, bottom: 80, left: 80, right: 80 },
+        padding: mob
+          ? { top: 50, bottom: 50, left: 30, right: 30 }
+          : { top: 80, bottom: 80, left: 80, right: 80 },
         maxZoom: 14,
-        pitch: 45,
-        duration: 1500,
+        pitch: mob ? 0 : 45,
+        duration: mob ? 1000 : 1500,
       });
     }
   }, [buildings, mapLoaded, selectedBuildingId, onBuildingClick]);
@@ -273,12 +289,13 @@ export default function MapboxMap({
   // Fly to
   useEffect(() => {
     if (!map.current || !mapLoaded || !flyTo) return;
+    const mobile = isMobile();
     map.current.flyTo({
       center: [flyTo.lng, flyTo.lat],
-      zoom: flyTo.zoom ?? 15,
-      pitch: 60,
-      bearing: -17.6,
-      duration: 2500,
+      zoom: flyTo.zoom ?? (mobile ? 14 : 15),
+      pitch: mobile ? 0 : 60,
+      bearing: mobile ? 0 : -17.6,
+      duration: mobile ? 1500 : 2500,
       essential: true,
     });
   }, [flyTo, mapLoaded]);
@@ -411,9 +428,11 @@ export default function MapboxMap({
 
       {/* Controls */}
       <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
-        <button onClick={toggle3D} className="map-control-btn" title={is3D ? 'Vedere 2D' : 'Vedere 3D'}>
-          {is3D ? '2D' : '3D'}
-        </button>
+        {!isMobile() && (
+          <button onClick={toggle3D} className="map-control-btn" title={is3D ? 'Vedere 2D' : 'Vedere 3D'}>
+            {is3D ? '2D' : '3D'}
+          </button>
+        )}
         <button onClick={resetView} className="map-control-btn" title="Reset vedere">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />

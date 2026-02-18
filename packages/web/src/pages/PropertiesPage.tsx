@@ -166,12 +166,12 @@ export default function PropertiesPage() {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Building2 className="w-6 h-6 text-primary-600" />
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600" />
           <div>
             <h1 className="page-title">Proprietati</h1>
-            <p className="page-subtitle">
+            <p className="page-subtitle hidden sm:block">
               Gestioneaza cladirile si spatiile disponibile
             </p>
           </div>
@@ -181,13 +181,14 @@ export default function PropertiesPage() {
           onClick={() => navigate('/proprietati/nou')}
         >
           <Plus className="w-4 h-4" />
-          <span>Adauga proprietate</span>
+          <span className="hidden sm:inline">Adauga proprietate</span>
+          <span className="sm:hidden">Adauga</span>
         </button>
       </div>
 
       {/* Tabs */}
       <div className="card">
-        <div className="flex items-center justify-between px-4 pt-3">
+        <div className="flex items-center justify-between px-3 sm:px-4 pt-2 sm:pt-3">
           <div className="flex items-center gap-1">
             <button
               onClick={() => setActiveTab('tabel')}
@@ -231,7 +232,7 @@ export default function PropertiesPage() {
               />
             </>
           ) : (
-            <div className="relative" style={{ height: 'calc(100vh - 260px)', minHeight: '500px' }}>
+            <div className="relative" style={{ height: 'calc(100vh - 200px)', minHeight: '400px' }}>
               {mapLoading && mapBuildings.length === 0 && (
                 <div className="absolute inset-0 z-20 bg-white/60 backdrop-blur-sm flex items-center justify-center rounded-b-lg">
                   <div className="flex flex-col items-center gap-2">
@@ -254,16 +255,16 @@ export default function PropertiesPage() {
               />
 
               {/* Legend */}
-              <div className="absolute bottom-4 left-4 z-10 bg-white/95 backdrop-blur-sm rounded-xl px-4 py-3 shadow-lg border border-slate-200">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Legenda</p>
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-500 ring-2 ring-blue-200" />
-                    <span className="text-xs text-slate-600">Inchiriere</span>
+              <div className="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur-sm rounded-lg sm:rounded-xl px-2.5 py-2 sm:px-4 sm:py-3 shadow-md sm:shadow-lg border border-slate-200">
+                <p className="text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1 sm:mb-2 hidden sm:block">Legenda</p>
+                <div className="flex sm:flex-col gap-2.5 sm:gap-1.5">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-blue-500 ring-1 sm:ring-2 ring-blue-200" />
+                    <span className="text-[10px] sm:text-xs text-slate-600">Inchiriere</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-emerald-200" />
-                    <span className="text-xs text-slate-600">Vanzare</span>
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 ring-1 sm:ring-2 ring-emerald-200" />
+                    <span className="text-[10px] sm:text-xs text-slate-600">Vanzare</span>
                   </div>
                 </div>
               </div>

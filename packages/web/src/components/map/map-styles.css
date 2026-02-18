@@ -408,6 +408,143 @@
   font-size: 10px !important;
 }
 
+/* ============================================
+   Mobile optimizations
+   ============================================ */
+@media (max-width: 768px) {
+  /* Markers: hide labels, show compact dot */
+  .marker-label {
+    display: none;
+  }
+
+  .marker-pin {
+    padding: 5px;
+    border-radius: 50%;
+    gap: 0;
+  }
+
+  .marker-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .marker-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .marker-pin::after {
+    bottom: -5px;
+    border-left-width: 5px;
+    border-right-width: 5px;
+    border-top-width: 5px;
+  }
+
+  .marker-pulse {
+    width: 10px;
+    height: 10px;
+  }
+
+  /* Popup: compact mobile version */
+  .mapbox-popup-custom .mapboxgl-popup-content {
+    border-radius: 12px;
+  }
+
+  .mapbox-popup-custom .mapboxgl-popup-close-button {
+    font-size: 22px;
+    padding: 6px 10px;
+    right: 2px;
+    top: 2px;
+    z-index: 5;
+  }
+
+  .map-popup {
+    padding: 12px;
+    min-width: 180px;
+    max-width: 240px;
+  }
+
+  .popup-header {
+    margin-bottom: 4px;
+    gap: 6px;
+  }
+
+  .popup-title {
+    font-size: 13px;
+    line-height: 1.2;
+  }
+
+  .popup-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+
+  .popup-location {
+    font-size: 11px;
+    margin-bottom: 1px;
+  }
+
+  .popup-address {
+    font-size: 11px;
+    margin-bottom: 8px;
+  }
+
+  .popup-action {
+    padding: 7px 10px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  /* Units list: smaller on mobile */
+  .popup-units-mobile {
+    max-height: 80px;
+    overflow: hidden;
+  }
+
+  /* Map controls */
+  .map-control-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 11px;
+  }
+
+  .mapboxgl-ctrl-group button {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .mapboxgl-ctrl-attrib {
+    font-size: 8px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .map-popup {
+    padding: 10px;
+    min-width: 160px;
+    max-width: 200px;
+  }
+
+  .popup-title {
+    font-size: 12px;
+  }
+
+  .marker-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .marker-icon svg {
+    width: 11px;
+    height: 11px;
+  }
+
+  .marker-pin {
+    padding: 4px;
+  }
+}
+
 /* ---- Slide-in animation for panels ---- */
 @keyframes slide-in-right {
   from {
