@@ -412,7 +412,7 @@
    Mobile optimizations
    ============================================ */
 @media (max-width: 768px) {
-  /* Markers: hide labels, show compact dot */
+  /* Markers: compact dot by default on mobile */
   .marker-label {
     display: none;
   }
@@ -443,6 +443,21 @@
   .marker-pulse {
     width: 10px;
     height: 10px;
+  }
+
+  /* When zoomed in: show labels on mobile */
+  .map-zoomed-in .marker-label {
+    display: block;
+    font-size: 10px;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .map-zoomed-in .marker-pin {
+    padding: 4px 8px 4px 4px;
+    border-radius: 16px;
+    gap: 4px;
   }
 
   /* Popup: compact mobile version */
