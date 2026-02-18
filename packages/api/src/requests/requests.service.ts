@@ -616,7 +616,7 @@ export class RequestsService {
     for (const person of persons) {
       const deal = await this.prisma.propertyRequest.create({
         data: {
-          name: `Cold Sales - ${person.company?.name || person.name}`,
+          name: `Oferta - ${person.company?.name || person.name}`,
           dealType: 'COLD_SALES',
           userId,
           companyId: person.companyId,
