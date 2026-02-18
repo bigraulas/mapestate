@@ -1,3 +1,4 @@
+import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 export interface Column<T> {
@@ -12,6 +13,7 @@ interface DataTableProps<T> {
   loading?: boolean;
   emptyMessage?: string;
   onRowClick?: (row: T) => void;
+  renderExpandedRow?: (row: T) => React.ReactNode | null;
 }
 
 export default function DataTable<T extends { id?: number | string }>({
@@ -20,6 +22,7 @@ export default function DataTable<T extends { id?: number | string }>({
   loading = false,
   emptyMessage = 'Nu exista date.',
   onRowClick,
+  renderExpandedRow,
 }: DataTableProps<T>) {
   if (loading) {
     return (
@@ -54,25 +57,36 @@ export default function DataTable<T extends { id?: number | string }>({
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-50">
-          {data.map((row, rowIndex) => (
-            <tr
-              key={row.id ?? rowIndex}
-              onClick={() => onRowClick?.(row)}
-              className={
-                onRowClick
-                  ? 'hover:bg-slate-50 cursor-pointer transition-colors'
-                  : 'hover:bg-slate-50 transition-colors'
-              }
-            >
-              {columns.map((col) => (
-                <td key={col.key} className="px-4 py-3 text-slate-700">
-                  {col.render
-                    ? col.render(row)
-                    : String((row as Record<string, unknown>)[col.key] ?? '-')}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {data.map((row, rowIndex) => {
+            const expanded = renderExpandedRow?.(row);
+            return (
+              <React.Fragment key={row.id ?? rowIndex}>
+                <tr
+                  onClick={() => onRowClick?.(row)}
+                  className={
+                    onRowClick
+                      ? 'hover:bg-slate-50 cursor-pointer transition-colors'
+                      : 'hover:bg-slate-50 transition-colors'
+                  }
+                >
+                  {columns.map((col) => (
+                    <td key={col.key} className="px-4 py-3 text-slate-700">
+                      {col.render
+                        ? col.render(row)
+                        : String((row as Record<string, unknown>)[col.key] ?? '-')}
+                    </td>
+                  ))}
+                </tr>
+                {expanded && (
+                  <tr>
+                    <td colSpan={columns.length} className="p-0">
+                      {expanded}
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>

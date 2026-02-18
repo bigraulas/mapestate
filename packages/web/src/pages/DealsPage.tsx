@@ -243,12 +243,12 @@ export default function DealsPage() {
       key: 'dealType',
       header: 'Tip Deal',
       render: (r) => (
-        <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+        <span className={`inline-flex items-center justify-center text-xs font-semibold px-3 py-1.5 rounded-md leading-tight text-center whitespace-pre-line ${
           r.dealType === 'COLD_SALES'
             ? 'bg-amber-100 text-amber-700'
             : 'bg-blue-100 text-blue-700'
         }`}>
-          {r.dealType === 'COLD_SALES' ? 'Ofertare in Masa' : 'Cerere Noua'}
+          {r.dealType === 'COLD_SALES' ? 'Ofertare\nin Masa' : 'Cerere\nNoua'}
         </span>
       ),
     },

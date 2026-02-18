@@ -16,4 +16,7 @@ export const companiesService = {
 
   filter: (name: string, page = 1, limit = 20) =>
     api.post('/contacts/companies/filter', { name, page, limit }),
+
+  lookupCui: (cui: string) =>
+    api.get(`/contacts/companies/lookup-cui/${encodeURIComponent(cui)}`),
 };

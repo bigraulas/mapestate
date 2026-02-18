@@ -6,6 +6,10 @@ import {
   Loader2,
   X,
   Trash2,
+  ChevronDown,
+  ChevronRight,
+  Mail,
+  Phone,
 } from 'lucide-react';
 import type { Person, Company, Label, PaginatedResponse } from '@mapestate/shared';
 import { personsService, companiesService, labelsService } from '@/services';
@@ -20,6 +24,9 @@ export default function PersonsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Person[] | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedPerson, setExpandedPerson] = useState<Person | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   // Form modal
   const [showForm, setShowForm] = useState(false);
@@ -91,6 +98,24 @@ export default function PersonsPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  const handleRowClick = async (person: Person) => {
+    if (expandedId === person.id) {
+      setExpandedId(null);
+      setExpandedPerson(null);
+      return;
+    }
+    setExpandedId(person.id);
+    setLoadingDetail(true);
+    try {
+      const res = await personsService.getById(person.id);
+      setExpandedPerson(res.data);
+    } catch {
+      setExpandedPerson(null);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
 
   const handleCreatePerson = async () => {
     if (!formData.name.trim()) {
@@ -170,7 +195,14 @@ export default function PersonsPage() {
       key: 'name',
       header: 'Nume',
       render: (row) => (
-        <span className="font-medium text-slate-900">{row.name}</span>
+        <div className="flex items-center gap-2">
+          {expandedId === row.id ? (
+            <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          )}
+          <span className="font-medium text-slate-900">{row.name}</span>
+        </div>
       ),
     },
     {
@@ -278,6 +310,40 @@ export default function PersonsPage() {
               ? 'Nicio persoana gasita.'
               : 'Nu exista persoane inregistrate.'
           }
+          onRowClick={handleRowClick}
+          renderExpandedRow={(row) => {
+            if (row.id !== expandedId) return null;
+            return (
+              <div className="bg-slate-50/50 px-6 py-4">
+                {loadingDetail ? (
+                  <div className="flex items-center gap-2 py-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                    <span className="text-xs text-slate-400">Se incarca...</span>
+                  </div>
+                ) : expandedPerson ? (
+                  <div className="flex items-center gap-6 text-sm text-slate-600">
+                    {expandedPerson.emails && expandedPerson.emails.length > 0 && expandedPerson.emails[0] && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-slate-400" />
+                        <span>{expandedPerson.emails.filter(Boolean).join(', ')}</span>
+                      </div>
+                    )}
+                    {expandedPerson.phones && expandedPerson.phones.length > 0 && expandedPerson.phones[0] && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-slate-400" />
+                        <span>{expandedPerson.phones.filter(Boolean).join(', ')}</span>
+                      </div>
+                    )}
+                    {!expandedPerson.emails?.[0] && !expandedPerson.phones?.[0] && (
+                      <span className="text-xs text-slate-400">Nu exista date de contact.</span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs text-slate-400">Nu s-au putut incarca detaliile.</span>
+                )}
+              </div>
+            );
+          }}
         />
 
         {searchResults === null && (

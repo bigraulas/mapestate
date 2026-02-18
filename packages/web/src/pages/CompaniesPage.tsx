@@ -7,6 +7,7 @@ import {
   Loader2,
   Users,
   X,
+  Search,
 } from 'lucide-react';
 import type { Company, Person, PaginatedResponse } from '@mapestate/shared';
 import { companiesService } from '@/services';
@@ -27,6 +28,7 @@ export default function CompaniesPage() {
   const [showForm, setShowForm] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [lookingUpCui, setLookingUpCui] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     vatNumber: '',
@@ -90,6 +92,35 @@ export default function CompaniesPage() {
       setFormError(Array.isArray(message) ? message.join(', ') : message);
     } finally {
       setFormSubmitting(false);
+    }
+  };
+
+  const handleLookupCui = async () => {
+    const cui = formData.vatNumber.replace(/\D/g, '');
+    if (!cui) {
+      setFormError('Introdu un CUI valid pentru cautare.');
+      return;
+    }
+    setFormError('');
+    setLookingUpCui(true);
+    try {
+      const res = await companiesService.lookupCui(cui);
+      const data = res.data;
+      if (!data || !data.name) {
+        setFormError('Nu s-a gasit nicio firma cu acest CUI.');
+        return;
+      }
+      setFormData((prev) => ({
+        ...prev,
+        name: data.name ?? prev.name,
+        address: data.address ?? prev.address,
+        jNumber: data.jNumber ?? prev.jNumber,
+        vatNumber: data.vatNumber ?? prev.vatNumber,
+      }));
+    } catch {
+      setFormError('Eroare la interogarea ANAF. Incearca din nou.');
+    } finally {
+      setLookingUpCui(false);
     }
   };
 
@@ -178,53 +209,54 @@ export default function CompaniesPage() {
           loading={loading}
           emptyMessage="Nu exista companii inregistrate."
           onRowClick={handleRowClick}
-        />
-
-        {/* Expanded persons row */}
-        {expandedId !== null && !loading && (
-          <div className="border-t border-slate-100 bg-slate-50/50 px-6 py-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="w-4 h-4 text-slate-500" />
-              <span className="text-sm font-medium text-slate-700">
-                Persoane de contact
-              </span>
-            </div>
-            {loadingPersons ? (
-              <div className="flex items-center gap-2 py-2">
-                <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-                <span className="text-xs text-slate-400">Se incarca...</span>
-              </div>
-            ) : expandedPersons.length === 0 ? (
-              <p className="text-xs text-slate-400">
-                Nu exista persoane asociate acestei companii.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {expandedPersons.map((person) => (
-                  <div
-                    key={person.id}
-                    className="flex items-center justify-between bg-white rounded-lg border border-slate-100 px-4 py-2"
-                  >
-                    <div>
-                      <span className="text-sm font-medium text-slate-800">
-                        {person.name}
-                      </span>
-                      {person.jobTitle && (
-                        <span className="text-xs text-slate-400 ml-2">
-                          {person.jobTitle}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-slate-500">
-                      {person.emails?.[0] && <span className="truncate">{person.emails[0]}</span>}
-                      {person.phones?.[0] && <span className="truncate">{person.phones[0]}</span>}
-                    </div>
+          renderExpandedRow={(row) => {
+            if (row.id !== expandedId) return null;
+            return (
+              <div className="bg-slate-50/50 px-6 py-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users className="w-4 h-4 text-slate-500" />
+                  <span className="text-sm font-medium text-slate-700">
+                    Persoane de contact
+                  </span>
+                </div>
+                {loadingPersons ? (
+                  <div className="flex items-center gap-2 py-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                    <span className="text-xs text-slate-400">Se incarca...</span>
                   </div>
-                ))}
+                ) : expandedPersons.length === 0 ? (
+                  <p className="text-xs text-slate-400">
+                    Nu exista persoane asociate acestei companii.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {expandedPersons.map((person) => (
+                      <div
+                        key={person.id}
+                        className="flex items-center justify-between bg-white rounded-lg border border-slate-100 px-4 py-2"
+                      >
+                        <div>
+                          <span className="text-sm font-medium text-slate-800">
+                            {person.name}
+                          </span>
+                          {person.jobTitle && (
+                            <span className="text-xs text-slate-400 ml-2">
+                              {person.jobTitle}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-500">
+                          {person.emails?.[0] && <span className="truncate">{person.emails[0]}</span>}
+                          {person.phones?.[0] && <span className="truncate">{person.phones[0]}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            );
+          }}
+        />
 
         <Pagination
           page={page}
@@ -255,10 +287,10 @@ export default function CompaniesPage() {
               type="text"
               value={formData.name}
               onChange={(e) =>
-                setFormData((prev) => ({ ...prev, name: e.target.value }))
+                setFormData((prev) => ({ ...prev, name: e.target.value.toUpperCase() }))
               }
-              className="input"
-              placeholder="Numele companiei"
+              className="input uppercase"
+              placeholder="NUMELE COMPANIEI"
               autoFocus
             />
           </div>
@@ -266,15 +298,30 @@ export default function CompaniesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="label">CUI</label>
-              <input
-                type="text"
-                value={formData.vatNumber}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, vatNumber: e.target.value }))
-                }
-                className="input"
-                placeholder="RO12345678"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.vatNumber}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, vatNumber: e.target.value.toUpperCase() }))
+                  }
+                  className="input flex-1 uppercase"
+                  placeholder="RO12345678"
+                />
+                <button
+                  type="button"
+                  onClick={handleLookupCui}
+                  disabled={lookingUpCui}
+                  className="btn-secondary !px-3 shrink-0"
+                  title="Cauta firma dupa CUI in baza de date ANAF"
+                >
+                  {lookingUpCui ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             </div>
             <div>
               <label className="label">Nr. Registru</label>

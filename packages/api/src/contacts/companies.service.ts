@@ -117,6 +117,35 @@ export class CompaniesService {
     };
   }
 
+  async lookupCui(cui: string) {
+    const numericCui = cui.replace(/\D/g, '');
+    if (!numericCui) return null;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const res = await fetch(
+      'https://webservicesp.anaf.ro/PlatitorTvaRest/api/v8/ws/tva',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([{ cui: parseInt(numericCui, 10), data: today }]),
+      },
+    );
+
+    if (!res.ok) return null;
+
+    const body: any = await res.json();
+    const found = body?.found?.[0];
+    if (!found) return null;
+
+    const gen = found.date_generale ?? {};
+    return {
+      name: gen.denumire ?? '',
+      address: gen.adresa ?? '',
+      jNumber: gen.nrRegCom ?? '',
+      vatNumber: `RO${numericCui}`,
+    };
+  }
+
   async updateLogo(id: number, logo: string) {
     await this.findOne(id);
 

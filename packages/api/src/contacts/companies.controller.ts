@@ -32,6 +32,11 @@ export class CompaniesController {
     return this.companiesService.findAll(page, limit, req.user.agencyId);
   }
 
+  @Get('lookup-cui/:cui')
+  lookupCui(@Param('cui') cui: string) {
+    return this.companiesService.lookupCui(cui);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.companiesService.findOne(id);
