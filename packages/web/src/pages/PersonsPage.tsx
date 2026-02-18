@@ -261,7 +261,7 @@ export default function PersonsPage() {
           <Users className="w-6 h-6 text-primary-600" />
           <div>
             <h1 className="page-title">Persoane</h1>
-            <p className="page-subtitle">
+            <p className="page-subtitle hidden sm:block">
               Gestioneaza persoanele de contact
             </p>
           </div>
@@ -311,6 +311,38 @@ export default function PersonsPage() {
               : 'Nu exista persoane inregistrate.'
           }
           onRowClick={handleRowClick}
+          renderMobileCard={(row) => (
+            <div className="px-4 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  {expandedId === row.id ? (
+                    <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <span className="font-medium text-slate-900 block truncate">{row.name}</span>
+                    {row.jobTitle && (
+                      <span className="text-xs text-slate-500">{row.jobTitle}</span>
+                    )}
+                  </div>
+                </div>
+                {row.label && (
+                  <span
+                    className="badge text-xs shrink-0"
+                    style={{ backgroundColor: `${row.label.color}20`, color: row.label.color }}
+                  >
+                    {row.label.name}
+                  </span>
+                )}
+              </div>
+              <div className="ml-6 mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                {row.company?.name && <span>{row.company.name}</span>}
+                <span className="badge bg-blue-50 text-blue-700">{row.openDeals} active</span>
+                <span className="badge bg-slate-100 text-slate-600">{row.closedDeals} inchise</span>
+              </div>
+            </div>
+          )}
           renderExpandedRow={(row) => {
             if (row.id !== expandedId) return null;
             return (
@@ -321,7 +353,7 @@ export default function PersonsPage() {
                     <span className="text-xs text-slate-400">Se incarca...</span>
                   </div>
                 ) : expandedPerson ? (
-                  <div className="flex items-center gap-6 text-sm text-slate-600">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600">
                     {expandedPerson.emails && expandedPerson.emails.length > 0 && expandedPerson.emails[0] && (
                       <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4 text-slate-400" />

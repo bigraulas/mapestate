@@ -5,10 +5,17 @@ import {
   LogOut,
   User,
   Menu,
+  Loader2,
+  Building,
+  FileText,
+  UserPlus,
+  Settings,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { auditService } from '@/services';
 
 const routeLabels: Record<string, string> = {
   '/': 'Dashboard',
@@ -22,6 +29,57 @@ const routeLabels: Record<string, string> = {
   '/utilizatori': 'Utilizatori',
 };
 
+interface AuditEntry {
+  id: number;
+  action: string;
+  entity: string;
+  entityId: number;
+  details?: Record<string, unknown> | null;
+  createdAt: string;
+  user: { id: number; firstName: string; lastName: string; email: string };
+}
+
+const actionLabels: Record<string, string> = {
+  CREATE: 'a creat',
+  UPDATE: 'a actualizat',
+  DELETE: 'a sters',
+  STATUS_CHANGE: 'a schimbat statusul',
+  REASSIGN: 'a reasignat',
+};
+
+const entityLabels: Record<string, string> = {
+  DEAL: 'deal',
+  BUILDING: 'proprietate',
+  UNIT: 'unitate',
+  COMPANY: 'companie',
+  PERSON: 'persoana',
+  OFFER: 'oferta',
+  ACTIVITY: 'activitate',
+  USER: 'utilizator',
+  SETTINGS: 'setari',
+};
+
+const entityIcons: Record<string, typeof Building> = {
+  DEAL: FileText,
+  BUILDING: Building,
+  COMPANY: Building,
+  PERSON: UserPlus,
+  USER: UserPlus,
+  OFFER: FileText,
+  SETTINGS: Settings,
+};
+
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (diff < 60) return 'acum';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}z`;
+  return date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
+}
+
 interface HeaderProps {
   onMenuToggle?: () => void;
 }
@@ -29,11 +87,32 @@ interface HeaderProps {
 export default function Header({ onMenuToggle }: HeaderProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Notifications state (admin only)
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifEntries, setNotifEntries] = useState<AuditEntry[]>([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifCount, setNotifCount] = useState(0);
+  const notifRef = useRef<HTMLDivElement>(null);
+
   const currentLabel = routeLabels[location.pathname] || 'Pagina';
+
+  const fetchNotifications = useCallback(async () => {
+    setNotifLoading(true);
+    try {
+      const res = await auditService.getAll({ page: 1, limit: 15 });
+      const entries: AuditEntry[] = res.data.data;
+      setNotifEntries(entries);
+      setNotifCount(res.data.meta.total);
+    } catch {
+      setNotifEntries([]);
+    } finally {
+      setNotifLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -43,10 +122,23 @@ export default function Header({ onMenuToggle }: HeaderProps) {
       ) {
         setDropdownOpen(false);
       }
+      if (
+        notifRef.current &&
+        !notifRef.current.contains(event.target as Node)
+      ) {
+        setNotifOpen(false);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Fetch notifications when dropdown opens
+  useEffect(() => {
+    if (notifOpen && isAdmin) {
+      fetchNotifications();
+    }
+  }, [notifOpen, isAdmin, fetchNotifications]);
 
   const handleLogout = () => {
     logout();
@@ -98,13 +190,72 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1.5 md:gap-3">
-        {/* Notifications */}
-        <button className="relative p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white text-2xs flex items-center justify-center font-medium">
-            3
-          </span>
-        </button>
+        {/* Notifications - admin only */}
+        {isAdmin && (
+          <div className="relative" ref={notifRef}>
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="relative p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+            >
+              <Bell className="w-5 h-5" />
+              {notifCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white text-2xs flex items-center justify-center font-medium">
+                  {notifCount > 9 ? '9+' : notifCount}
+                </span>
+              )}
+            </button>
+
+            {notifOpen && (
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl bg-white border border-slate-200 shadow-lg z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-slate-800">Activitate agenti</h3>
+                  <span className="text-2xs text-slate-400">{notifCount} total</span>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto">
+                  {notifLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+                    </div>
+                  ) : notifEntries.length === 0 ? (
+                    <div className="py-8 text-center text-sm text-slate-400">
+                      Nu exista activitate recenta.
+                    </div>
+                  ) : (
+                    notifEntries.map((entry) => {
+                      const Icon = entityIcons[entry.entity] || ArrowRightLeft;
+                      const actionLabel = actionLabels[entry.action] || entry.action.toLowerCase();
+                      const entityLabel = entityLabels[entry.entity] || entry.entity.toLowerCase();
+                      const detailName = (entry.details as Record<string, string> | null)?.name || '';
+
+                      return (
+                        <div
+                          key={entry.id}
+                          className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-b-0"
+                        >
+                          <div className="w-7 h-7 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <Icon className="w-3.5 h-3.5 text-primary-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-slate-700 leading-snug">
+                              <span className="font-medium">{entry.user.firstName} {entry.user.lastName}</span>
+                              {' '}{actionLabel}{' '}
+                              <span className="text-slate-500">{entityLabel}</span>
+                              {detailName && (
+                                <span className="font-medium text-slate-600"> "{detailName}"</span>
+                              )}
+                            </p>
+                            <p className="text-2xs text-slate-400 mt-0.5">{timeAgo(entry.createdAt)}</p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* User menu */}
         <div className="relative" ref={dropdownRef}>

@@ -14,6 +14,7 @@ interface DataTableProps<T> {
   emptyMessage?: string;
   onRowClick?: (row: T) => void;
   renderExpandedRow?: (row: T) => React.ReactNode | null;
+  renderMobileCard?: (row: T) => React.ReactNode;
 }
 
 export default function DataTable<T extends { id?: number | string }>({
@@ -23,6 +24,7 @@ export default function DataTable<T extends { id?: number | string }>({
   emptyMessage = 'Nu exista date.',
   onRowClick,
   renderExpandedRow,
+  renderMobileCard,
 }: DataTableProps<T>) {
   if (loading) {
     return (
@@ -42,53 +44,80 @@ export default function DataTable<T extends { id?: number | string }>({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-slate-100">
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider"
-              >
-                {col.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-50">
+    <>
+      {/* Mobile card view */}
+      {renderMobileCard && (
+        <div className="md:hidden divide-y divide-slate-100">
           {data.map((row, rowIndex) => {
             const expanded = renderExpandedRow?.(row);
             return (
               <React.Fragment key={row.id ?? rowIndex}>
-                <tr
+                <div
                   onClick={() => onRowClick?.(row)}
                   className={
                     onRowClick
-                      ? 'hover:bg-slate-50 cursor-pointer transition-colors'
-                      : 'hover:bg-slate-50 transition-colors'
+                      ? 'cursor-pointer active:bg-slate-50 transition-colors'
+                      : ''
                   }
                 >
-                  {columns.map((col) => (
-                    <td key={col.key} className="px-4 py-3 text-slate-700">
-                      {col.render
-                        ? col.render(row)
-                        : String((row as Record<string, unknown>)[col.key] ?? '-')}
-                    </td>
-                  ))}
-                </tr>
-                {expanded && (
-                  <tr>
-                    <td colSpan={columns.length} className="p-0">
-                      {expanded}
-                    </td>
-                  </tr>
-                )}
+                  {renderMobileCard(row)}
+                </div>
+                {expanded && <div>{expanded}</div>}
               </React.Fragment>
             );
           })}
-        </tbody>
-      </table>
-    </div>
+        </div>
+      )}
+
+      {/* Desktop table view */}
+      <div className={`overflow-x-auto ${renderMobileCard ? 'hidden md:block' : ''}`}>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-100">
+              {columns.map((col) => (
+                <th
+                  key={col.key}
+                  className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider"
+                >
+                  {col.header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {data.map((row, rowIndex) => {
+              const expanded = renderExpandedRow?.(row);
+              return (
+                <React.Fragment key={row.id ?? rowIndex}>
+                  <tr
+                    onClick={() => onRowClick?.(row)}
+                    className={
+                      onRowClick
+                        ? 'hover:bg-slate-50 cursor-pointer transition-colors'
+                        : 'hover:bg-slate-50 transition-colors'
+                    }
+                  >
+                    {columns.map((col) => (
+                      <td key={col.key} className="px-4 py-3 text-slate-700">
+                        {col.render
+                          ? col.render(row)
+                          : String((row as Record<string, unknown>)[col.key] ?? '-')}
+                      </td>
+                    ))}
+                  </tr>
+                  {expanded && (
+                    <tr>
+                      <td colSpan={columns.length} className="p-0">
+                        {expanded}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

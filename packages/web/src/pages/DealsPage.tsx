@@ -332,7 +332,7 @@ export default function DealsPage() {
           <FileText className="w-6 h-6 text-primary-600" />
           <div>
             <h1 className="page-title">Ofertare</h1>
-            <p className="page-subtitle">
+            <p className="page-subtitle hidden sm:block">
               Gestioneaza ofertele de inchiriere si vanzare
             </p>
           </div>
@@ -352,14 +352,16 @@ export default function DealsPage() {
         <div className="flex items-center gap-2">
           <button className="btn-primary" onClick={() => setFormOpen(true)}>
             <Plus className="w-4 h-4" />
-            <span>Cerere Noua</span>
+            <span className="hidden sm:inline">Cerere Noua</span>
+            <span className="sm:hidden">Cerere</span>
           </button>
           <button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors"
+            className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors"
             onClick={() => setColdSalesOpen(true)}
           >
             <Zap className="w-4 h-4" />
-            <span>Ofertare Manuala</span>
+            <span className="hidden sm:inline">Ofertare Manuala</span>
+            <span className="sm:hidden">Manual</span>
           </button>
         </div>
       </div>
@@ -399,6 +401,42 @@ export default function DealsPage() {
             loading={loading}
             emptyMessage="Nu exista deal-uri inregistrate. Adauga primul deal."
             onRowClick={(row) => navigate(`/deals/${row.id}`)}
+            renderMobileCard={(row) => {
+              const statusColor = REQUEST_STATUS_COLORS[row.status] ?? '#6B7280';
+              return (
+                <div className="px-4 py-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                      row.dealType === 'COLD_SALES' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {row.dealType === 'COLD_SALES' ? 'Manual' : 'Cerere'}
+                    </span>
+                    <span className="font-medium text-slate-900 truncate flex-1">{row.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-slate-500 mb-1.5">
+                    {row.company?.name && <span className="truncate">{row.company.name}</span>}
+                    {row.person?.name && <span className="truncate">· {row.person.name}</span>}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      {row.numberOfSqm != null && <span>{row.numberOfSqm} mp</span>}
+                      {row.estimatedFeeValue != null && <span>{row.estimatedFeeValue.toLocaleString('ro-RO')} €</span>}
+                    </div>
+                    <span
+                      className="text-[10px] font-medium px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: `${statusColor}18`, color: statusColor }}
+                    >
+                      {REQUEST_STATUS_LABELS[row.status]}
+                    </span>
+                  </div>
+                  {isAdmin && row.user && (
+                    <p className="text-[10px] text-primary-600 mt-1">
+                      {row.user.firstName} {row.user.lastName}
+                    </p>
+                  )}
+                </div>
+              );
+            }}
           />
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>

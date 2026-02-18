@@ -196,7 +196,7 @@ export default function CompaniesPage() {
           <Building className="w-6 h-6 text-primary-600" />
           <div>
             <h1 className="page-title">Companii</h1>
-            <p className="page-subtitle">
+            <p className="page-subtitle hidden sm:block">
               Gestioneaza companiile din baza de date
             </p>
           </div>
@@ -215,10 +215,34 @@ export default function CompaniesPage() {
           loading={loading}
           emptyMessage="Nu exista companii inregistrate."
           onRowClick={handleRowClick}
+          renderMobileCard={(row) => (
+            <div className="px-4 py-3">
+              <div className="flex items-center gap-2">
+                {expandedId === row.id ? (
+                  <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                )}
+                <span className="font-medium text-slate-900 truncate">{row.name}</span>
+              </div>
+              <div className="ml-6 mt-1.5 space-y-0.5">
+                {row.vatNumber && (
+                  <p className="text-xs font-mono text-slate-500">{row.vatNumber}</p>
+                )}
+                {row.address && (
+                  <p className="text-xs text-slate-500 truncate">{row.address}</p>
+                )}
+                <div className="flex items-center gap-3 pt-1">
+                  <span className="badge bg-blue-50 text-blue-700">{row.openDeals} active</span>
+                  <span className="badge bg-slate-100 text-slate-600">{row.closedDeals} inchise</span>
+                </div>
+              </div>
+            </div>
+          )}
           renderExpandedRow={(row) => {
             if (row.id !== expandedId) return null;
             return (
-              <div className="bg-slate-50/50 px-6 py-4">
+              <div className="bg-slate-50/50 px-4 sm:px-6 py-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Users className="w-4 h-4 text-slate-500" />
                   <span className="text-sm font-medium text-slate-700">
@@ -239,7 +263,7 @@ export default function CompaniesPage() {
                     {expandedPersons.map((person) => (
                       <div
                         key={person.id}
-                        className="flex items-center justify-between bg-white rounded-lg border border-slate-100 px-4 py-2"
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 bg-white rounded-lg border border-slate-100 px-4 py-2"
                       >
                         <div>
                           <span className="text-sm font-medium text-slate-800">

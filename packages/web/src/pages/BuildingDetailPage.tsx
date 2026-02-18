@@ -335,7 +335,7 @@ export default function BuildingDetailPage() {
                       </button>
 
                       {isExpanded && (
-                        <div className="pb-4 pl-11 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                        <div className="pb-4 pl-11 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                           {unit.usefulHeight != null && (
                             <div>
                               <span className="text-slate-400">Inaltime utila:</span>{' '}

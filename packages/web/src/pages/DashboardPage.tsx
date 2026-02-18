@@ -230,57 +230,57 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50">
-              <FileText className="w-5 h-5 text-blue-600" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 sm:p-5">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-50">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Cereri Active</p>
-              <p className="text-2xl font-semibold text-slate-900">
+              <p className="text-xs sm:text-sm text-slate-500">Cereri Active</p>
+              <p className="text-lg sm:text-2xl font-semibold text-slate-900">
                 {kpis?.activeRequests ?? 0}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-green-50">
-              <TrendingUp className="w-5 h-5 text-green-600" />
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 sm:p-5">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-green-50">
+              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Fee Estimat Total</p>
-              <p className="text-2xl font-semibold text-slate-900">
+              <p className="text-xs sm:text-sm text-slate-500">Fee Estimat</p>
+              <p className="text-lg sm:text-2xl font-semibold text-slate-900">
                 {formatCurrency(kpis?.totalEstimatedFee ?? 0)}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-50">
-              <Square className="w-5 h-5 text-purple-600" />
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 sm:p-5">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-purple-50">
+              <Square className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">mp Solicitati</p>
-              <p className="text-2xl font-semibold text-slate-900">
+              <p className="text-xs sm:text-sm text-slate-500">mp Solicitati</p>
+              <p className="text-lg sm:text-2xl font-semibold text-slate-900">
                 {formatNumber(kpis?.totalSqm ?? 0)}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-orange-50">
-              <CheckCircle className="w-5 h-5 text-orange-600" />
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 sm:p-5">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-orange-50">
+              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-500">Dealuri Inchise</p>
-              <p className="text-2xl font-semibold text-slate-900">
+              <p className="text-xs sm:text-sm text-slate-500">Dealuri Inchise</p>
+              <p className="text-lg sm:text-2xl font-semibold text-slate-900">
                 {kpis?.closedDealsCount ?? 0}
               </p>
             </div>
@@ -297,7 +297,23 @@ export default function DashboardPage() {
               Performanta Brokeri
             </h2>
           </div>
-          <div className="overflow-x-auto">
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-2">
+            {brokerPerformance.map((bp) => (
+              <div key={bp.id} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                <div className="font-medium text-slate-900 text-sm">{bp.name}</div>
+                <div className="text-xs text-slate-400 mb-2">{bp.email}</div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  <div>Active: <span className="font-medium text-slate-700">{bp.activeDeals}</span></div>
+                  <div>Castigate: <span className="font-medium text-emerald-600">{bp.wonDeals}</span></div>
+                  <div>Pierdute: <span className="font-medium text-red-500">{bp.lostDeals}</span></div>
+                  <div>Fee: <span className="font-medium text-slate-900">{formatCurrency(bp.estimatedFee)}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200">
@@ -431,59 +447,87 @@ export default function DashboardPage() {
           Contracte care Expira
         </h2>
         {expiringLeases.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-4 font-medium text-slate-600">
-                    Unit
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-600">
-                    Companie
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-600">
-                    Data expirare
-                  </th>
-                  <th className="text-left py-3 px-4 font-medium text-slate-600">
-                    Prioritate
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {expiringLeases.map((lease) => (
-                  <tr
-                    key={lease.id}
-                    className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                  >
-                    <td className="py-3 px-4">
-                      <div className="font-medium text-slate-900">
-                        {lease.unit?.name || '-'}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {lease.building?.name || ''}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-slate-700">
-                      {lease.company?.name || '-'}
-                    </td>
-                    <td className="py-3 px-4 text-slate-700">
+          <>
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-2">
+              {expiringLeases.map((lease) => (
+                <div key={lease.id} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                  <div className="flex items-center justify-between mb-1">
+                    <div>
+                      <div className="font-medium text-slate-900 text-sm">{lease.unit?.name || '-'}</div>
+                      <div className="text-xs text-slate-500">{lease.building?.name || ''}</div>
+                    </div>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border shrink-0 ${PRIORITY_STYLES[lease.priority]}`}
+                    >
+                      {PRIORITY_LABELS[lease.priority]}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs mt-1.5">
+                    <span className="text-slate-600">{lease.company?.name || '-'}</span>
+                    <span className="text-slate-500">
                       {new Date(lease.endDate).toLocaleDateString('ro-RO')}
-                      <span className="ml-2 text-xs text-slate-400">
-                        ({lease.daysUntilExpiry} zile)
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${PRIORITY_STYLES[lease.priority]}`}
-                      >
-                        {PRIORITY_LABELS[lease.priority]}
-                      </span>
-                    </td>
+                      <span className="ml-1 text-slate-400">({lease.daysUntilExpiry}z)</span>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="text-left py-3 px-4 font-medium text-slate-600">
+                      Unit
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-600">
+                      Companie
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-600">
+                      Data expirare
+                    </th>
+                    <th className="text-left py-3 px-4 font-medium text-slate-600">
+                      Prioritate
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {expiringLeases.map((lease) => (
+                    <tr
+                      key={lease.id}
+                      className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                    >
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-slate-900">
+                          {lease.unit?.name || '-'}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {lease.building?.name || ''}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-slate-700">
+                        {lease.company?.name || '-'}
+                      </td>
+                      <td className="py-3 px-4 text-slate-700">
+                        {new Date(lease.endDate).toLocaleDateString('ro-RO')}
+                        <span className="ml-2 text-xs text-slate-400">
+                          ({lease.daysUntilExpiry} zile)
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${PRIORITY_STYLES[lease.priority]}`}
+                        >
+                          {PRIORITY_LABELS[lease.priority]}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         ) : (
           <p className="text-sm text-slate-400 text-center py-12">
             Niciun contract nu expira in curand.

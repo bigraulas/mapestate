@@ -440,20 +440,20 @@ export default function MapboxMap({
         <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
       </div>
 
-      {/* Controls */}
-      <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
-        {!isMobile() && (
+      {/* Controls - hidden on mobile */}
+      {!isMobile() && (
+        <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
           <button onClick={toggle3D} className="map-control-btn" title={is3D ? 'Vedere 2D' : 'Vedere 3D'}>
             {is3D ? '2D' : '3D'}
           </button>
-        )}
-        <button onClick={resetView} className="map-control-btn" title="Reset vedere">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
-          </svg>
-        </button>
-      </div>
+          <button onClick={resetView} className="map-control-btn" title="Reset vedere">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Pick mode indicator */}
       {pickMode && (
