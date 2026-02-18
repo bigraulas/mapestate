@@ -63,16 +63,19 @@ services:
     ports:
       - "${APP_PORT:-80}:80"
     networks:
-      - mapestate
-      - coolify
+      mapestate: null
+      coolify:
+        aliases:
+          - mapestate-web
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 3
       start_period: 5s
     labels:
       - traefik.enable=true
+      - traefik.docker.network=coolify
       - traefik.http.routers.mapestate-https.rule=Host(`mapestate.eu`) || Host(`www.mapestate.eu`)
       - traefik.http.routers.mapestate-https.entrypoints=https
       - traefik.http.routers.mapestate-https.tls=true

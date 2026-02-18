@@ -123,7 +123,7 @@ export class CompaniesService {
 
     const today = new Date().toISOString().slice(0, 10);
     const res = await fetch(
-      'https://webservicesp.anaf.ro/PlatitorTvaRest/api/v8/ws/tva',
+      'https://webservicesp.anaf.ro/api/PlatitorTvaRest/v9/tva',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
