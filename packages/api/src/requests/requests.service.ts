@@ -473,9 +473,12 @@ export class RequestsService {
 
     const results = buildings.map((building) => {
       // Filter units by transactionType if requestType is specified
+      // RENT_AND_SALE units match both RENT and SALE requests
       const matchedUnits = request.requestType
         ? (building.units || []).filter(
-            (u) => u.transactionType === request.requestType,
+            (u) =>
+              u.transactionType === request.requestType ||
+              u.transactionType === 'RENT_AND_SALE',
           )
         : building.units || [];
 

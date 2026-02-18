@@ -244,7 +244,7 @@ async function main() {
       address: 'Str. Industriilor 5, Chiajna, Ilfov',
       latitude: 44.4355,
       longitude: 25.9680,
-      transactionType: 'RENT',
+      transactionType: 'RENT_AND_SALE',
       clearHeight: 10.0,
       floorLoading: 5.0,
       sprinkler: true,
@@ -300,6 +300,9 @@ async function main() {
       availableFrom: new Date('2026-03-01'),
       contractLength: '5 ani + optiune prelungire',
       expandingPossibilities: 'Da, hala A2 adiacenta',
+      salePrice: 2500000,
+      salePriceVatIncluded: false,
+      transactionType: 'RENT_AND_SALE',
       buildingId: building1.id,
       userId: broker1.id,
     },
@@ -560,7 +563,7 @@ async function main() {
       address: 'Sos. de Centura 23, Pantelimon, Ilfov',
       latitude: 44.4530,
       longitude: 26.2080,
-      transactionType: 'RENT',
+      transactionType: 'RENT_AND_SALE',
       clearHeight: 9.0,
       floorLoading: 4.0,
       sprinkler: true,
@@ -619,7 +622,36 @@ async function main() {
       userId: broker2.id,
     },
   });
-  console.log(`Created: ${building4.name} (1 unit)`);
+
+  // Sale-only unit
+  await prisma.unit.create({
+    data: {
+      name: 'Depozit D3 - Vanzare',
+      warehouseSpace: { sqm: 3200, rentPrice: 0 },
+      docks: 2,
+      driveins: 1,
+      usefulHeight: 9.0,
+      hasOffice: false,
+      hasSanitary: true,
+      sanitarySqm: 30,
+      salePrice: 980000,
+      salePriceVatIncluded: true,
+      transactionType: 'SALE',
+      temperature: 'Ambient',
+      sprinkler: true,
+      hydrantSystem: true,
+      isuAuthorization: false,
+      heating: 'Aeroterme pe gaz',
+      buildingStructure: 'Structura metalica',
+      gridStructure: '12m',
+      gridFormat: 'x 20m',
+      floorLoading: 4.0,
+      lighting: 'LED',
+      buildingId: building4.id,
+      userId: broker2.id,
+    },
+  });
+  console.log(`Created: ${building4.name} (2 units)`);
 
   // ── Deals across ALL pipeline statuses ────────────────────────
 

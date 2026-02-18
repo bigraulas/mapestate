@@ -13,7 +13,6 @@ interface UnitFormPanelProps {
 
 interface UnitForm {
   name: string;
-  transactionType: 'RENT' | 'SALE';
   usefulHeight: string;
   hasOffice: boolean;
   officeSqm: string;
@@ -50,7 +49,6 @@ function unitToForm(u?: Unit | null): UnitForm {
   if (!u) {
     return {
       name: '',
-      transactionType: 'RENT',
       usefulHeight: '',
       hasOffice: false,
       officeSqm: '',
@@ -83,7 +81,6 @@ function unitToForm(u?: Unit | null): UnitForm {
   }
   return {
     name: u.name,
-    transactionType: (u.transactionType as 'RENT' | 'SALE') || 'RENT',
     usefulHeight: u.usefulHeight?.toString() ?? '',
     hasOffice: u.hasOffice ?? false,
     officeSqm: u.officeSqm?.toString() ?? '',
@@ -132,12 +129,9 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
   const update = <K extends keyof UnitForm>(key: K, val: UnitForm[K]) =>
     setForm((p) => ({ ...p, [key]: val }));
 
-  const isSale = form.transactionType === 'SALE';
-
   const buildPayload = () => ({
     name: form.name,
     buildingId,
-    transactionType: form.transactionType,
     usefulHeight: form.usefulHeight ? parseFloat(form.usefulHeight) : undefined,
     hasOffice: form.hasOffice,
     officeSqm: form.officeSqm ? parseFloat(form.officeSqm) : undefined,
@@ -246,27 +240,6 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
             </div>
           )}
 
-          {/* Transaction type toggle */}
-          <div>
-            <label className="label mb-1.5">Tip tranzactie</label>
-            <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-fit">
-              {(['RENT', 'SALE'] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => update('transactionType', t)}
-                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    form.transactionType === t
-                      ? 'bg-white text-slate-900 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  {t === 'RENT' ? 'Inchiriere' : 'Vanzare'}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Name + Height */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -329,83 +302,85 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
             </label>
           </div>
 
-          {/* Prices */}
-          {isSale ? (
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                Pret achizitie
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">Pret (EUR)</label>
-                  <input
-                    type="number"
-                    value={form.salePrice}
-                    onChange={(e) => update('salePrice', e.target.value)}
-                    className="input"
-                    placeholder="0"
-                    min="0"
-                    step="1"
-                  />
-                </div>
-                <div className="flex items-end pb-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.salePriceVatIncluded}
-                      onChange={(e) => update('salePriceVatIncluded', e.target.checked)}
-                      className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="text-sm text-slate-700">Pretul include TVA</span>
-                  </label>
-                </div>
+          {/* Rent Prices */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+              Preturi inchiriere (EUR/mp/luna)
+            </p>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="label">Hala</label>
+                <input
+                  type="number"
+                  value={form.warehousePrice}
+                  onChange={(e) => update('warehousePrice', e.target.value)}
+                  className="input"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div>
+                <label className="label">Birou</label>
+                <input
+                  type="number"
+                  value={form.officePrice}
+                  onChange={(e) => update('officePrice', e.target.value)}
+                  className="input"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div>
+                <label className="label">Mentenanta</label>
+                <input
+                  type="number"
+                  value={form.maintenancePrice}
+                  onChange={(e) => update('maintenancePrice', e.target.value)}
+                  className="input"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
               </div>
             </div>
-          ) : (
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                Preturi (EUR/mp/luna)
-              </p>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="label">Hala</label>
+          </div>
+
+          {/* Sale Price */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+              Pret achizitie
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label">Pret (EUR)</label>
+                <input
+                  type="number"
+                  value={form.salePrice}
+                  onChange={(e) => update('salePrice', e.target.value)}
+                  className="input"
+                  placeholder="0"
+                  min="0"
+                  step="1"
+                />
+              </div>
+              <div className="flex items-end pb-2">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
-                    type="number"
-                    value={form.warehousePrice}
-                    onChange={(e) => update('warehousePrice', e.target.value)}
-                    className="input"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
+                    type="checkbox"
+                    checked={form.salePriceVatIncluded}
+                    onChange={(e) => update('salePriceVatIncluded', e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                   />
-                </div>
-                <div>
-                  <label className="label">Birou</label>
-                  <input
-                    type="number"
-                    value={form.officePrice}
-                    onChange={(e) => update('officePrice', e.target.value)}
-                    className="input"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-                <div>
-                  <label className="label">Mentenanta</label>
-                  <input
-                    type="number"
-                    value={form.maintenancePrice}
-                    onChange={(e) => update('maintenancePrice', e.target.value)}
-                    className="input"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
+                  <span className="text-sm text-slate-700">Pretul include TVA</span>
+                </label>
               </div>
             </div>
-          )}
+            <p className="text-xs text-slate-400 mt-2">
+              Tipul tranzactiei se detecteaza automat din preturile completate.
+            </p>
+          </div>
 
           {/* Access - collapsible */}
           <div>

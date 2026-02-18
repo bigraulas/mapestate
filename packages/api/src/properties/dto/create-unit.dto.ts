@@ -7,22 +7,12 @@ import {
   IsObject,
   IsArray,
   IsDateString,
-  IsEnum,
 } from 'class-validator';
-
-enum TransactionType {
-  RENT = 'RENT',
-  SALE = 'SALE',
-}
 
 export class CreateUnitDto {
   @IsString()
   @IsNotEmpty()
   name!: string;
-
-  @IsEnum(TransactionType)
-  @IsOptional()
-  transactionType?: TransactionType;
 
   @IsNumber()
   @IsNotEmpty()

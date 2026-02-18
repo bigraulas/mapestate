@@ -10,7 +10,6 @@ import {
   Crosshair,
 } from 'lucide-react';
 import type { Building } from '@mapestate/shared';
-import { TransactionType } from '@mapestate/shared';
 import { buildingsService } from '@/services';
 import { MapboxMap } from '@/components/map';
 
@@ -51,7 +50,6 @@ async function reverseGeocode(lng: number, lat: number): Promise<string | null> 
 interface FormData {
   name: string;
   address: string;
-  transactionType: TransactionType;
   latitude: string;
   longitude: string;
   ownerName: string;
@@ -62,7 +60,6 @@ interface FormData {
 const INITIAL_FORM: FormData = {
   name: '',
   address: '',
-  transactionType: TransactionType.RENT,
   latitude: '',
   longitude: '',
   ownerName: '',
@@ -133,7 +130,6 @@ export default function BuildingFormPage() {
         setForm({
           name: b.name,
           address: b.address ?? '',
-          transactionType: b.transactionType,
           latitude: b.latitude?.toString() ?? '',
           longitude: b.longitude?.toString() ?? '',
           ownerName: b.ownerName ?? '',
@@ -191,7 +187,6 @@ export default function BuildingFormPage() {
     const payload: Record<string, unknown> = {
       name: form.name,
       address: form.address || undefined,
-      transactionType: form.transactionType,
       latitude: form.latitude ? parseFloat(form.latitude) : undefined,
       longitude: form.longitude ? parseFloat(form.longitude) : undefined,
       ownerName: form.ownerName || undefined,
@@ -298,19 +293,6 @@ export default function BuildingFormPage() {
             )}
           </div>
 
-          <div>
-            <label className="label">Tip tranzactie *</label>
-            <select
-              value={form.transactionType}
-              onChange={(e) =>
-                updateField('transactionType', e.target.value as TransactionType)
-              }
-              className="input"
-            >
-              <option value={TransactionType.RENT}>Inchiriere</option>
-              <option value={TransactionType.SALE}>Vanzare</option>
-            </select>
-          </div>
         </div>
 
         {/* Owner */}

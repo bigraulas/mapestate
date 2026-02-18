@@ -28,7 +28,13 @@ export class BuildingsService {
     }
 
     if (transactionType) {
-      where.transactionType = transactionType as Prisma.EnumTransactionTypeFilter['equals'];
+      if (transactionType === 'RENT') {
+        where.transactionType = { in: ['RENT', 'RENT_AND_SALE'] };
+      } else if (transactionType === 'SALE') {
+        where.transactionType = { in: ['SALE', 'RENT_AND_SALE'] };
+      } else {
+        where.transactionType = transactionType as Prisma.EnumTransactionTypeFilter['equals'];
+      }
     }
 
     if (agencyId) {
@@ -141,9 +147,10 @@ export class BuildingsService {
   }
 
   async create(dto: CreateBuildingDto, userId: number) {
+    const { ...rest } = dto;
     const building = await this.prisma.building.create({
       data: {
-        ...dto,
+        ...rest,
         userId,
         polygonPoints: dto.polygonPoints
           ? (dto.polygonPoints as Prisma.InputJsonValue)
@@ -181,7 +188,8 @@ export class BuildingsService {
   async update(id: number, dto: UpdateBuildingDto, userId?: number) {
     await this.findOne(id);
 
-    const data: Record<string, unknown> = { ...dto };
+    const { transactionType: _tt, ...dtoRest } = dto as Record<string, unknown>;
+    const data: Record<string, unknown> = { ...dtoRest };
 
     if (dto.polygonPoints !== undefined) {
       data.polygonPoints = dto.polygonPoints;
@@ -250,8 +258,14 @@ export class BuildingsService {
     }
 
     if (filterDto.transactionType) {
-      where.transactionType =
-        filterDto.transactionType as Prisma.EnumTransactionTypeFilter['equals'];
+      if (filterDto.transactionType === 'RENT') {
+        where.transactionType = { in: ['RENT', 'RENT_AND_SALE'] };
+      } else if (filterDto.transactionType === 'SALE') {
+        where.transactionType = { in: ['SALE', 'RENT_AND_SALE'] };
+      } else {
+        where.transactionType =
+          filterDto.transactionType as Prisma.EnumTransactionTypeFilter['equals'];
+      }
     }
 
     if (filterDto.minSqm || filterDto.maxSqm) {

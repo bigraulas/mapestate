@@ -173,12 +173,16 @@ export default function MapboxMap({
     validBuildings.forEach((building) => {
       const isSelected = building.id === selectedBuildingId;
       const isRent = building.transactionType === 'RENT';
+      const isRentAndSale = building.transactionType === 'RENT_AND_SALE';
       const units = building.units ?? [];
+
+      const markerClass = isRentAndSale ? 'marker-rent-sale' : isRent ? 'marker-rent' : 'marker-sale';
+      const pulseClass = isRentAndSale ? 'pulse-rent-sale' : isRent ? 'pulse-rent' : 'pulse-sale';
 
       const el = document.createElement('div');
       el.className = 'mapbox-custom-marker';
       el.innerHTML = `
-        <div class="marker-pin ${isRent ? 'marker-rent' : 'marker-sale'} ${isSelected ? 'marker-selected' : ''} marker-own">
+        <div class="marker-pin ${markerClass} ${isSelected ? 'marker-selected' : ''} marker-own">
           <div class="marker-icon">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -187,7 +191,7 @@ export default function MapboxMap({
           </div>
           <div class="marker-label">${building.name}${units.length > 0 ? ` (${units.length})` : ''}</div>
         </div>
-        <div class="marker-pulse ${isRent ? 'pulse-rent' : 'pulse-sale'}"></div>
+        <div class="marker-pulse ${pulseClass}"></div>
       `;
 
       // Build units HTML for popup
@@ -234,8 +238,8 @@ export default function MapboxMap({
         <div class="map-popup">
           <div class="popup-header">
             <h3 class="popup-title">${building.name}</h3>
-            <span class="popup-badge ${isRent ? 'badge-rent' : 'badge-sale'}">
-              ${isRent ? 'Inchiriere' : 'Vanzare'}
+            <span class="popup-badge ${isRentAndSale ? 'badge-rent-sale' : isRent ? 'badge-rent' : 'badge-sale'}">
+              ${isRentAndSale ? 'Inchiriere & Vanzare' : isRent ? 'Inchiriere' : 'Vanzare'}
             </span>
           </div>
           ${building.location ? `<p class="popup-location">${building.location.name}, ${building.location.county}</p>` : ''}

@@ -12,6 +12,7 @@ export enum AgencyStatus {
 export enum TransactionType {
   RENT = 'RENT',
   SALE = 'SALE',
+  RENT_AND_SALE = 'RENT_AND_SALE',
 }
 
 export enum RequestStatus {

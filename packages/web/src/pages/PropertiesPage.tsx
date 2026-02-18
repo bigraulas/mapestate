@@ -16,6 +16,7 @@ type Tab = 'tabel' | 'harta';
 const transactionTypeLabels: Record<string, string> = {
   [TransactionType.RENT]: 'Inchiriere',
   [TransactionType.SALE]: 'Vanzare',
+  [TransactionType.RENT_AND_SALE]: 'Inchiriere & Vanzare',
 };
 
 const baseColumns: Column<Building>[] = [
@@ -67,7 +68,9 @@ const baseColumns: Column<Building>[] = [
         className={`badge ${
           row.transactionType === TransactionType.RENT
             ? 'bg-blue-50 text-blue-700'
-            : 'bg-emerald-50 text-emerald-700'
+            : row.transactionType === TransactionType.RENT_AND_SALE
+              ? 'bg-violet-50 text-violet-700'
+              : 'bg-emerald-50 text-emerald-700'
         }`}
       >
         {transactionTypeLabels[row.transactionType] ?? row.transactionType}
@@ -265,6 +268,10 @@ export default function PropertiesPage() {
                   <div className="flex items-center gap-1.5 sm:gap-2">
                     <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-emerald-500 ring-1 sm:ring-2 ring-emerald-200" />
                     <span className="text-[10px] sm:text-xs text-slate-600">Vanzare</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-violet-500 ring-1 sm:ring-2 ring-violet-200" />
+                    <span className="text-[10px] sm:text-xs text-slate-600">Inchiriere & Vanzare</span>
                   </div>
                 </div>
               </div>

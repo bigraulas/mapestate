@@ -4,11 +4,9 @@ import {
   IsOptional,
   IsNumber,
   IsBoolean,
-  IsEnum,
   IsArray,
   IsDateString,
 } from 'class-validator';
-import { TransactionType } from '@prisma/client';
 
 export class CreateBuildingDto {
   @IsString()
@@ -98,10 +96,6 @@ export class CreateBuildingDto {
   @IsBoolean()
   @IsOptional()
   buildToSuit?: boolean;
-
-  @IsEnum(TransactionType)
-  @IsOptional()
-  transactionType?: TransactionType;
 
   @IsArray()
   @IsOptional()

@@ -83,7 +83,6 @@ export class DiscoverController {
         longitude: body.lng,
         totalSqm: body.sqm || undefined,
         availableSqm: body.sqm || undefined,
-        transactionType: (body.transactionType as 'RENT' | 'SALE') || 'RENT',
         locationId: body.locationId,
         osmId: body.osmId,
         ownerName: body.ownerName || undefined,

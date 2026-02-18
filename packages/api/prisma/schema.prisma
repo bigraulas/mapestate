@@ -33,6 +33,7 @@ enum DealType {
 enum TransactionType {
   RENT
   SALE
+  RENT_AND_SALE
 }
 
 enum RequestStatus {

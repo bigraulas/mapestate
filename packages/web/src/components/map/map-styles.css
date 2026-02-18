@@ -61,6 +61,11 @@
   color: white;
 }
 
+.marker-rent-sale .marker-icon {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+}
+
 .marker-label {
   font-size: 11px;
   font-weight: 600;
@@ -102,6 +107,10 @@
 
 .pulse-sale {
   background: rgba(16, 185, 129, 0.3);
+}
+
+.pulse-rent-sale {
+  background: rgba(139, 92, 246, 0.3);
 }
 
 @keyframes pulse-ring {
@@ -182,6 +191,11 @@
 .badge-sale {
   background: #ecfdf5;
   color: #059669;
+}
+
+.badge-rent-sale {
+  background: #f5f3ff;
+  color: #7c3aed;
 }
 
 .popup-location {

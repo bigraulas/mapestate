@@ -132,10 +132,16 @@ export default function BuildingDetailPage() {
                 className={`badge text-xs ${
                   building.transactionType === TransactionType.RENT
                     ? 'bg-blue-50 text-blue-700'
-                    : 'bg-emerald-50 text-emerald-700'
+                    : building.transactionType === TransactionType.RENT_AND_SALE
+                      ? 'bg-violet-50 text-violet-700'
+                      : 'bg-emerald-50 text-emerald-700'
                 }`}
               >
-                {building.transactionType === TransactionType.RENT ? 'Inchiriere' : 'Vanzare'}
+                {building.transactionType === TransactionType.RENT
+                  ? 'Inchiriere'
+                  : building.transactionType === TransactionType.RENT_AND_SALE
+                    ? 'Inchiriere & Vanzare'
+                    : 'Vanzare'}
               </span>
               {building.osmId && (
                 <span className="badge text-xs bg-amber-50 text-amber-600">OSM</span>
@@ -289,10 +295,16 @@ export default function BuildingDetailPage() {
                                 className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
                                   unit.transactionType === TransactionType.SALE
                                     ? 'bg-emerald-50 text-emerald-600'
-                                    : 'bg-blue-50 text-blue-600'
+                                    : unit.transactionType === TransactionType.RENT_AND_SALE
+                                      ? 'bg-violet-50 text-violet-600'
+                                      : 'bg-blue-50 text-blue-600'
                                 }`}
                               >
-                                {unit.transactionType === TransactionType.SALE ? 'Vanzare' : 'Inchiriere'}
+                                {unit.transactionType === TransactionType.SALE
+                                  ? 'Vanzare'
+                                  : unit.transactionType === TransactionType.RENT_AND_SALE
+                                    ? 'Inchiriere & Vanzare'
+                                    : 'Inchiriere'}
                               </span>
                               {unit.usefulHeight != null && (
                                 <span className="text-xs text-slate-400">H: {unit.usefulHeight}m</span>

@@ -421,11 +421,12 @@ export class PdfGeneratorService {
       .text('COMMERCIAL SPECS', colX, y);
     y += 20;
 
-    const isSale = building.transactionType === 'SALE';
+    const isSale = building.transactionType === 'SALE' || building.transactionType === 'RENT_AND_SALE';
+    const isRent = building.transactionType === 'RENT' || building.transactionType === 'RENT_AND_SALE';
     const commercialRows: [string, string][] = [];
 
     if (isSale && specs.salePrice != null) {
-      // SALE: show fixed sale price
+      // SALE / RENT_AND_SALE: show fixed sale price
       const vatSuffix = specs.salePriceVatIncluded ? '' : ' + TVA';
       commercialRows.push([
         'pret achizitie',
@@ -439,13 +440,13 @@ export class PdfGeneratorService {
         `${this.fmtNum(specs.warehouseSqm)} sqm`,
       ]);
     }
-    if (!isSale && specs.warehouseRent > 0) {
+    if (isRent && specs.warehouseRent > 0) {
       commercialRows.push([
         'rent warehouse',
         `${specs.warehouseRent.toFixed(2)} EUR/sqm/month`,
       ]);
     }
-    if (!isSale && specs.serviceCharge != null) {
+    if (isRent && specs.serviceCharge != null) {
       commercialRows.push([
         'service charge',
         `${specs.serviceCharge.toFixed(2)} EUR/sqm/month`,
@@ -457,7 +458,7 @@ export class PdfGeneratorService {
         `${this.fmtNum(specs.officeSanitarySqm)} sqm`,
       ]);
     }
-    if (!isSale && specs.officeSanitaryRent > 0) {
+    if (isRent && specs.officeSanitaryRent > 0) {
       commercialRows.push([
         'rent office/sanitary',
         `${specs.officeSanitaryRent.toFixed(2)} EUR/sqm/month`,
