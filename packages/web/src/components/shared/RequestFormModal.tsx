@@ -477,7 +477,7 @@ export default function RequestFormModal({
             <div className="space-y-2">
               <Suspense
                 fallback={
-                  <div className="h-[240px] bg-slate-100 rounded-lg flex items-center justify-center">
+                  <div className="h-[200px] sm:h-[240px] bg-slate-100 rounded-lg flex items-center justify-center">
                     <span className="inline-block w-5 h-5 border-2 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
                   </div>
                 }
@@ -486,7 +486,7 @@ export default function RequestFormModal({
                   center={searchCenter}
                   radiusKm={searchRadius}
                   onCenterChange={(lat, lng) => setSearchCenter({ lat, lng })}
-                  className="h-[240px]"
+                  className="h-[200px] sm:h-[240px]"
                 />
               </Suspense>
 
@@ -500,9 +500,9 @@ export default function RequestFormModal({
                   step={1}
                   value={searchRadius}
                   onChange={(e) => setSearchRadius(Number(e.target.value))}
-                  className="flex-1 h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-primary-600"
+                  className="flex-1 h-2 sm:h-1.5 bg-slate-200 rounded-full appearance-none cursor-pointer accent-primary-600"
                 />
-                <span className="text-xs font-medium text-slate-700 w-12 text-right">
+                <span className="text-sm sm:text-xs font-medium text-slate-700 w-14 sm:w-12 text-right">
                   {searchRadius} km
                 </span>
               </div>

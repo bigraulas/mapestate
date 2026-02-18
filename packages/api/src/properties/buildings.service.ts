@@ -141,7 +141,7 @@ export class BuildingsService {
   }
 
   async create(dto: CreateBuildingDto, userId: number) {
-    return this.prisma.building.create({
+    const building = await this.prisma.building.create({
       data: {
         ...dto,
         userId,
@@ -170,9 +170,15 @@ export class BuildingsService {
         },
       },
     });
+
+    await this.auditService.log('CREATE', 'BUILDING', building.id, userId, {
+      name: building.name,
+    });
+
+    return building;
   }
 
-  async update(id: number, dto: UpdateBuildingDto) {
+  async update(id: number, dto: UpdateBuildingDto, userId?: number) {
     await this.findOne(id);
 
     const data: Record<string, unknown> = { ...dto };
@@ -187,7 +193,7 @@ export class BuildingsService {
         : null;
     }
 
-    return this.prisma.building.update({
+    const result = await this.prisma.building.update({
       where: { id },
       data,
       include: {
@@ -208,14 +214,28 @@ export class BuildingsService {
         },
       },
     });
+
+    if (userId) {
+      await this.auditService.log('UPDATE', 'BUILDING', id, userId, {
+        name: result.name,
+      });
+    }
+
+    return result;
   }
 
-  async remove(id: number) {
-    await this.findOne(id);
+  async remove(id: number, userId?: number) {
+    const building = await this.findOne(id);
 
     await this.prisma.building.delete({
       where: { id },
     });
+
+    if (userId) {
+      await this.auditService.log('DELETE', 'BUILDING', id, userId, {
+        name: building.name,
+      });
+    }
   }
 
   async filter(filterDto: Record<string, unknown>, agencyId?: number | null) {

@@ -89,13 +89,14 @@ export class RequestsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateRequestDto,
+    @Req() req: any,
   ) {
-    return this.requestsService.update(id, dto);
+    return this.requestsService.update(id, dto, req.user.id);
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.requestsService.remove(id);
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.requestsService.remove(id, req.user.id);
   }
 
   @Post('filter')
@@ -111,8 +112,9 @@ export class RequestsController {
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateStatusDto,
+    @Req() req: any,
   ) {
-    return this.requestsService.updateStatus(id, dto);
+    return this.requestsService.updateStatus(id, dto, req.user.id);
   }
 
   @Patch(':id/reassign')

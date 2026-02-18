@@ -237,10 +237,15 @@ export class RequestsService {
 
     await this.recalculateDealCounts(request.companyId, request.personId);
 
+    await this.auditService.log('CREATE', 'DEAL', request.id, userId, {
+      name: request.name,
+      type: dto.requestType,
+    });
+
     return request;
   }
 
-  async update(id: number, dto: UpdateRequestDto) {
+  async update(id: number, dto: UpdateRequestDto, userId?: number) {
     const existing = await this.findOne(id);
     const { locationIds, ...data } = dto;
 
@@ -281,10 +286,16 @@ export class RequestsService {
       await this.recalculateDealCounts(null, pid!);
     }
 
+    if (userId) {
+      await this.auditService.log('UPDATE', 'DEAL', id, userId, {
+        name: request.name,
+      });
+    }
+
     return request;
   }
 
-  async remove(id: number) {
+  async remove(id: number, userId?: number) {
     const request = await this.findOne(id);
 
     if (request.offers.length > 0) {
@@ -296,6 +307,12 @@ export class RequestsService {
     await this.prisma.propertyRequest.delete({ where: { id } });
 
     await this.recalculateDealCounts(request.companyId, request.personId);
+
+    if (userId) {
+      await this.auditService.log('DELETE', 'DEAL', id, userId, {
+        name: request.name,
+      });
+    }
 
     return { message: 'Request deleted successfully' };
   }
@@ -389,7 +406,7 @@ export class RequestsService {
     };
   }
 
-  async updateStatus(id: number, dto: UpdateStatusDto) {
+  async updateStatus(id: number, dto: UpdateStatusDto, userId?: number) {
     const existing = await this.findOne(id);
 
     if (TERMINAL_STATUSES.includes(existing.status)) {
@@ -423,6 +440,14 @@ export class RequestsService {
     });
 
     await this.recalculateDealCounts(request.companyId, request.personId);
+
+    if (userId) {
+      await this.auditService.log('STATUS_CHANGE', 'DEAL', id, userId, {
+        from: existing.status,
+        to: dto.status,
+        name: request.name,
+      });
+    }
 
     return request;
   }

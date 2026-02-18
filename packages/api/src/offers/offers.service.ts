@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../common/prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { PdfGeneratorService } from './pdf-generator.service';
+import { AuditService } from '../audit/audit.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
@@ -20,6 +21,7 @@ export class OffersService {
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly pdfGenerator: PdfGeneratorService,
+    private readonly auditService: AuditService,
   ) {}
 
   async findAll(page: number = 1, limit: number = 20, agencyId?: number | null) {
@@ -278,6 +280,14 @@ export class OffersService {
         data: { status: 'OFFERING', lastStatusChange: new Date() },
       });
     }
+
+    await this.auditService.log('SEND_OFFER', 'OFFER', deal.id, userId, {
+      dealName: deal.name,
+      buildingCount: buildings.length,
+      buildings: buildings.map((b) => b.name).join(', '),
+      recipients: recipientEmails.join(', '),
+      emailStatus: emailResult.status,
+    });
 
     return {
       sent: createdOffers.length,

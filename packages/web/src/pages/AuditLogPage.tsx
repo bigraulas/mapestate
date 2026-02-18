@@ -44,6 +44,7 @@ const ACTION_LABELS: Record<string, string> = {
   DELETE: 'Stergere',
   STATUS_CHANGE: 'Schimbare status',
   REASSIGN: 'Reasignare',
+  SEND_OFFER: 'Trimitere oferta',
 };
 
 const ACTION_BADGE: Record<string, string> = {
@@ -52,11 +53,13 @@ const ACTION_BADGE: Record<string, string> = {
   DELETE: 'bg-red-50 text-red-700',
   STATUS_CHANGE: 'bg-amber-50 text-amber-700',
   REASSIGN: 'bg-purple-50 text-purple-700',
+  SEND_OFFER: 'bg-teal-50 text-teal-700',
 };
 
 const ENTITY_LABELS: Record<string, string> = {
   DEAL: 'Deal',
   BUILDING: 'Proprietate',
+  OFFER: 'Oferta',
   USER: 'Utilizator',
   SETTINGS: 'Setari',
 };
@@ -65,6 +68,7 @@ const ENTITY_OPTIONS = [
   { value: '', label: 'Toate' },
   { value: 'DEAL', label: 'Deal' },
   { value: 'BUILDING', label: 'Proprietate' },
+  { value: 'OFFER', label: 'Oferta' },
   { value: 'USER', label: 'Utilizator' },
   { value: 'SETTINGS', label: 'Setari' },
 ];
@@ -87,13 +91,27 @@ function formatDateTime(iso: string): string {
   }
 }
 
+const DETAIL_KEY_LABELS: Record<string, string> = {
+  name: 'Nume',
+  dealName: 'Deal',
+  type: 'Tip',
+  from: 'De la',
+  to: 'La',
+  fromUserId: 'De la broker',
+  toUserId: 'La broker',
+  buildingCount: 'Nr. proprietati',
+  buildings: 'Proprietati',
+  recipients: 'Destinatari',
+  emailStatus: 'Status email',
+};
+
 function formatDetails(details: Record<string, unknown> | null): string {
   if (!details || typeof details !== 'object') return '-';
   const entries = Object.entries(details);
   if (entries.length === 0) return '-';
   return entries
-    .map(([key, value]) => `${key}=${String(value ?? '')}`)
-    .join(', ');
+    .map(([key, value]) => `${DETAIL_KEY_LABELS[key] || key}: ${String(value ?? '')}`)
+    .join(' · ');
 }
 
 // ---------------------------------------------------------------------------

@@ -65,13 +65,14 @@ export class BuildingsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateBuildingDto,
+    @Req() req: any,
   ) {
-    return this.buildingsService.update(id, dto);
+    return this.buildingsService.update(id, dto, req.user.id);
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.buildingsService.remove(id);
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.buildingsService.remove(id, req.user.id);
   }
 
   @Post('filter')
