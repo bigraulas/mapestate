@@ -56,6 +56,7 @@ interface MatchResult {
     address?: string | null;
     availableSqm?: number | null;
     serviceCharge?: number | null;
+    rentPrice?: number | null;
     clearHeight?: number | null;
     availableFrom?: string | null;
     location?: { id: number; name: string } | null;
@@ -68,6 +69,12 @@ interface MatchResult {
     height: number;
     availability: number;
   };
+}
+
+interface BuildingOverride {
+  buildingId: number;
+  rentPrice: string;
+  serviceCharge: string;
 }
 
 const ALL_STATUSES: RequestStatus[] = [
@@ -130,6 +137,12 @@ export default function DealDetailPage() {
   const [reassignUserId, setReassignUserId] = useState<number | ''>('');
   const [reassignSubmitting, setReassignSubmitting] = useState(false);
   const [brokersList, setBrokersList] = useState<{id: number; firstName: string; lastName: string}[]>([]);
+
+  // Pre-send modal
+  const [preSendOpen, setPreSendOpen] = useState(false);
+  const [preSendAction, setPreSendAction] = useState<'email' | 'pdf' | 'preview' | 'whatsapp'>('email');
+  const [buildingOverrides, setBuildingOverrides] = useState<BuildingOverride[]>([]);
+  const [offerMessage, setOfferMessage] = useState('');
 
   // Edit deal
   const [editOpen, setEditOpen] = useState(false);
@@ -290,6 +303,127 @@ export default function DealDetailPage() {
     ? editPersons.filter((p) => p.companyId === Number(editForm.companyId))
     : editPersons;
 
+  // ----- Pre-send modal helpers -----
+
+  const openPreSend = (action: 'email' | 'pdf' | 'preview' | 'whatsapp') => {
+    // Initialize overrides from selected buildings' current prices
+    const overrides = selectedBuildingIds.map((bid) => {
+      const match = matches.find((m) => m.building.id === bid);
+      return {
+        buildingId: bid,
+        rentPrice: match?.building.rentPrice != null ? String(match.building.rentPrice) : '',
+        serviceCharge: match?.building.serviceCharge != null ? String(match.building.serviceCharge) : '',
+      };
+    });
+    setBuildingOverrides(overrides);
+    setOfferMessage('');
+    setPreSendAction(action);
+    setPreSendOpen(true);
+  };
+
+  const getOverridesPayload = () => {
+    return buildingOverrides
+      .filter((o) => o.rentPrice !== '' || o.serviceCharge !== '')
+      .map((o) => ({
+        buildingId: o.buildingId,
+        ...(o.rentPrice !== '' ? { rentPrice: Number(o.rentPrice) } : {}),
+        ...(o.serviceCharge !== '' ? { serviceCharge: Number(o.serviceCharge) } : {}),
+      }));
+  };
+
+  const handlePreSendConfirm = async () => {
+    const overrides = getOverridesPayload();
+    setPreSendOpen(false);
+
+    if (preSendAction === 'email') {
+      if (!id || selectedBuildingIds.length === 0) return;
+      setSending(true);
+      try {
+        await dealsService.sendOffers({
+          dealId: Number(id),
+          buildingIds: selectedBuildingIds,
+          message: offerMessage || undefined,
+          buildingOverrides: overrides.length > 0 ? overrides : undefined,
+        });
+        toast.success('Email trimis cu succes!');
+        setSelectedBuildingIds([]);
+        await fetchDeal();
+      } catch {
+        toast.error('Eroare la trimiterea email-ului.');
+      } finally {
+        setSending(false);
+      }
+    } else if (preSendAction === 'preview') {
+      if (!id || selectedBuildingIds.length === 0) return;
+      setPdfLoading(true);
+      toast('Se genereaza preview...', { icon: '👁️' });
+      try {
+        const res = await dealsService.generatePdfWithOverrides(
+          Number(id),
+          selectedBuildingIds,
+          overrides.length > 0 ? overrides : undefined,
+        );
+        const blob = new Blob([res.data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } catch {
+        toast.error('Eroare la generarea PDF-ului.');
+      } finally {
+        setPdfLoading(false);
+      }
+    } else if (preSendAction === 'pdf') {
+      if (!id || selectedBuildingIds.length === 0) return;
+      setPdfLoading(true);
+      toast('Se genereaza PDF-ul...', { icon: '📄' });
+      try {
+        const res = await dealsService.generatePdfWithOverrides(
+          Number(id),
+          selectedBuildingIds,
+          overrides.length > 0 ? overrides : undefined,
+        );
+        const url = window.URL.createObjectURL(new Blob([res.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `oferta-${id}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        toast.success('PDF descarcat!');
+      } catch {
+        toast.error('Eroare la generarea PDF-ului.');
+      } finally {
+        setPdfLoading(false);
+      }
+    } else if (preSendAction === 'whatsapp') {
+      if (!id || selectedBuildingIds.length === 0) return;
+      setPdfLoading(true);
+      toast('Se pregateste link-ul PDF...', { icon: '💬' });
+      try {
+        const res = await dealsService.createPdfLink(
+          Number(id),
+          selectedBuildingIds,
+          overrides.length > 0 ? overrides : undefined,
+        );
+        const token = res.data.token;
+        const pdfUrl = `${window.location.origin}/api/offers/pdf/shared/${token}`;
+
+        const phones = (deal?.person as any)?.phones;
+        const phone = Array.isArray(phones) && phones.length > 0 ? phones[0] : '';
+        const cleanPhone = phone.replace(/[^0-9+]/g, '').replace(/^\+/, '');
+
+        const message = encodeURIComponent(
+          `Buna ziua, va trimit oferta pentru ${deal?.name || 'proprietati'}.\n\nPuteti descarca prezentarea aici:\n${pdfUrl}`,
+        );
+
+        window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+      } catch {
+        toast.error('Eroare la generarea link-ului.');
+      } finally {
+        setPdfLoading(false);
+      }
+    }
+  };
+
   // ----- Handlers -----
 
   const toggleBuilding = (buildingId: number) => {
@@ -306,92 +440,6 @@ export default function DealDetailPage() {
 
   const deselectAll = () => {
     setSelectedBuildingIds([]);
-  };
-
-  const handleSendOffers = async () => {
-    if (!id || selectedBuildingIds.length === 0) return;
-    setSending(true);
-    try {
-      await dealsService.sendOffers({
-        dealId: Number(id),
-        buildingIds: selectedBuildingIds,
-      });
-      toast.success('Email trimis cu succes!');
-      setSelectedBuildingIds([]);
-      await fetchDeal();
-    } catch {
-      toast.error('Eroare la trimiterea email-ului.');
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleDownloadSelectedPdf = async () => {
-    if (!id || selectedBuildingIds.length === 0) return;
-    setPdfLoading(true);
-    toast('Se genereaza PDF-ul...', { icon: '📄' });
-    try {
-      const res = await dealsService.downloadPdfForBuildings(
-        Number(id),
-        selectedBuildingIds,
-      );
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `oferta-${id}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success('PDF descarcat!');
-    } catch {
-      toast.error('Eroare la generarea PDF-ului.');
-    } finally {
-      setPdfLoading(false);
-    }
-  };
-
-  const handlePreviewPdf = async () => {
-    if (!id || selectedBuildingIds.length === 0) return;
-    setPdfLoading(true);
-    toast('Se genereaza preview...', { icon: '👁️' });
-    try {
-      const res = await dealsService.downloadPdfForBuildings(
-        Number(id),
-        selectedBuildingIds,
-      );
-      const blob = new Blob([res.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      window.open(url, '_blank');
-    } catch {
-      toast.error('Eroare la generarea PDF-ului.');
-    } finally {
-      setPdfLoading(false);
-    }
-  };
-
-  const handleSendWhatsApp = async () => {
-    if (!id || selectedBuildingIds.length === 0) return;
-    setPdfLoading(true);
-    toast('Se pregateste link-ul PDF...', { icon: '💬' });
-    try {
-      const res = await dealsService.createPdfLink(Number(id), selectedBuildingIds);
-      const token = res.data.token;
-      const pdfUrl = `${window.location.origin}/api/offers/pdf/shared/${token}`;
-
-      const phones = (deal?.person as any)?.phones;
-      const phone = Array.isArray(phones) && phones.length > 0 ? phones[0] : '';
-      const cleanPhone = phone.replace(/[^0-9+]/g, '').replace(/^\+/, '');
-
-      const message = encodeURIComponent(
-        `Buna ziua, va trimit oferta pentru ${deal?.name || 'proprietati'}.\n\nPuteti descarca prezentarea aici:\n${pdfUrl}`,
-      );
-
-      window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
-    } catch {
-      toast.error('Eroare la generarea link-ului.');
-    } finally {
-      setPdfLoading(false);
-    }
   };
 
   const handleReassign = async () => {
@@ -724,6 +772,11 @@ export default function DealDetailPage() {
                           {match.building.totalDocks} docks
                         </span>
                       )}
+                      {match.building.rentPrice != null && match.building.rentPrice > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[11px] bg-amber-50 text-amber-700 px-2 py-1 rounded-md font-medium">
+                          {match.building.rentPrice} €/mp
+                        </span>
+                      )}
                       {match.building.serviceCharge != null && (
                         <span className="inline-flex items-center gap-1 text-[11px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md">
                           {match.building.serviceCharge} €/mp SC
@@ -913,7 +966,7 @@ export default function DealDetailPage() {
             {/* Action buttons - 2x2 grid on mobile, row on desktop */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
-                onClick={handlePreviewPdf}
+                onClick={() => openPreSend('preview')}
                 disabled={pdfLoading}
                 className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50 transition-colors"
               >
@@ -921,7 +974,7 @@ export default function DealDetailPage() {
                 <span>Preview</span>
               </button>
               <button
-                onClick={handleDownloadSelectedPdf}
+                onClick={() => openPreSend('pdf')}
                 disabled={pdfLoading}
                 className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 active:bg-slate-50 disabled:opacity-50 transition-colors"
               >
@@ -929,7 +982,7 @@ export default function DealDetailPage() {
                 <span>PDF</span>
               </button>
               <button
-                onClick={handleSendWhatsApp}
+                onClick={() => openPreSend('whatsapp')}
                 disabled={pdfLoading}
                 className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-green-500 text-sm font-medium text-white active:bg-green-600 disabled:opacity-50 transition-colors"
               >
@@ -937,7 +990,7 @@ export default function DealDetailPage() {
                 <span>WhatsApp</span>
               </button>
               <button
-                onClick={handleSendOffers}
+                onClick={() => openPreSend('email')}
                 disabled={sending}
                 className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-primary-600 text-sm font-medium text-white active:bg-primary-700 disabled:opacity-50 transition-colors"
               >
@@ -948,6 +1001,116 @@ export default function DealDetailPage() {
           </div>
         </div>
       )}
+
+      {/* ── PRE-SEND MODAL ── */}
+      <Modal
+        isOpen={preSendOpen}
+        onClose={() => setPreSendOpen(false)}
+        title="Personalizeaza oferta"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-500">
+            Verifica si modifica preturile inainte de a trimite oferta.
+          </p>
+
+          {/* Building overrides list */}
+          <div className="space-y-3">
+            {buildingOverrides.map((override, idx) => {
+              const match = matches.find((m) => m.building.id === override.buildingId);
+              if (!match) return null;
+              return (
+                <div key={override.buildingId} className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex items-start gap-2 mb-2.5">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 leading-tight">
+                        {match.building.name}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {match.building.location?.name}
+                        {match.building.availableSqm ? ` · ${match.building.availableSqm.toLocaleString('ro-RO')} mp` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                        Chirie (EUR/mp/luna)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={override.rentPrice}
+                        onChange={(e) => {
+                          const updated = [...buildingOverrides];
+                          updated[idx] = { ...updated[idx], rentPrice: e.target.value };
+                          setBuildingOverrides(updated);
+                        }}
+                        className="input mt-0.5"
+                        placeholder="Pret chirie"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">
+                        Service charge (EUR/mp/luna)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={override.serviceCharge}
+                        onChange={(e) => {
+                          const updated = [...buildingOverrides];
+                          updated[idx] = { ...updated[idx], serviceCharge: e.target.value };
+                          setBuildingOverrides(updated);
+                        }}
+                        className="input mt-0.5"
+                        placeholder="Service charge"
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Custom message (for email) */}
+          {preSendAction === 'email' && (
+            <div>
+              <label htmlFor="offer-message" className="label">Mesaj personalizat (optional)</label>
+              <textarea
+                id="offer-message"
+                value={offerMessage}
+                onChange={(e) => setOfferMessage(e.target.value)}
+                className="input"
+                rows={2}
+                placeholder="Adauga un mesaj in email..."
+              />
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button onClick={() => setPreSendOpen(false)} className="btn-secondary">
+              Anuleaza
+            </button>
+            <button
+              onClick={handlePreSendConfirm}
+              disabled={sending || pdfLoading}
+              className={`btn-primary ${preSendAction === 'whatsapp' ? '!bg-green-500 hover:!bg-green-600' : ''}`}
+            >
+              {(sending || pdfLoading) && (
+                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              )}
+              <span>
+                {preSendAction === 'email' ? (sending ? 'Se trimite...' : 'Trimite email')
+                  : preSendAction === 'preview' ? 'Deschide preview'
+                  : preSendAction === 'pdf' ? 'Descarca PDF'
+                  : 'Trimite WhatsApp'}
+              </span>
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* ── STATUS CHANGE MODAL ── */}
       <Modal

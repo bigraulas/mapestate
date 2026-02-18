@@ -42,6 +42,7 @@ export const dealsService = {
     dealId: number;
     buildingIds: number[];
     message?: string;
+    buildingOverrides?: { buildingId: number; rentPrice?: number; serviceCharge?: number }[];
   }) => api.post('/offers/send', data),
 
   downloadPdf: (dealId: number) =>
@@ -52,8 +53,17 @@ export const dealsService = {
       responseType: 'blob',
     }),
 
-  createPdfLink: (dealId: number, buildingIds: number[]) =>
-    api.post<{ token: string }>(`/offers/deal/${dealId}/pdf-link`, { buildingIds }),
+  generatePdfWithOverrides: (
+    dealId: number,
+    buildingIds: number[],
+    buildingOverrides?: { buildingId: number; rentPrice?: number; serviceCharge?: number }[],
+  ) =>
+    api.post(`/offers/deal/${dealId}/pdf`, { buildingIds, buildingOverrides }, {
+      responseType: 'blob',
+    }),
+
+  createPdfLink: (dealId: number, buildingIds: number[], buildingOverrides?: { buildingId: number; rentPrice?: number; serviceCharge?: number }[]) =>
+    api.post<{ token: string }>(`/offers/deal/${dealId}/pdf-link`, { buildingIds, buildingOverrides }),
 
   reassign: (id: number, userId: number) =>
     api.patch(`/requests/${id}/reassign`, { userId }),

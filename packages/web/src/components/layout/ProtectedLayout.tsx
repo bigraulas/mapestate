@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -7,6 +7,13 @@ import Header from './Header';
 export default function ProtectedLayout() {
   const { user, loading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Scroll main content to top on route change
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [location.pathname]);
 
   if (loading) {
     return (
@@ -47,7 +54,7 @@ export default function ProtectedLayout() {
 
       <div className="flex flex-col flex-1 overflow-hidden">
         <Header onMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)} />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden">
           <Outlet />
         </main>
       </div>
