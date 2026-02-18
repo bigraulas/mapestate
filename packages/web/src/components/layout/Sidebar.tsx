@@ -6,7 +6,6 @@ import {
   Building,
   Users,
   Handshake,
-  Calendar,
   Settings,
   ChevronDown,
   ChevronRight,
@@ -41,7 +40,6 @@ const navigation: NavItem[] = [
     ],
   },
   { label: 'Ofertare', path: '/deals', icon: Handshake },
-  { label: 'Activitati', path: '/activitati', icon: Calendar },
   {
     label: 'Admin',
     icon: Shield,

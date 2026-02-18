@@ -11,7 +11,7 @@ import CompaniesPage from './pages/CompaniesPage';
 import PersonsPage from './pages/PersonsPage';
 import DealsPage from './pages/DealsPage';
 import DealDetailPage from './pages/DealDetailPage';
-import ActivitiesPage from './pages/ActivitiesPage';
+
 import UsersPage from './pages/UsersPage';
 import AuditLogPage from './pages/AuditLogPage';
 import SettingsPage from './pages/SettingsPage';
@@ -34,7 +34,6 @@ function App() {
         <Route path="persoane" element={<PersonsPage />} />
         <Route path="deals" element={<DealsPage />} />
         <Route path="deals/:id" element={<DealDetailPage />} />
-        <Route path="activitati" element={<ActivitiesPage />} />
         <Route path="utilizatori" element={<UsersPage />} />
         <Route path="jurnal" element={<AuditLogPage />} />
         <Route path="setari" element={<SettingsPage />} />

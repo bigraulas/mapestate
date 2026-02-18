@@ -83,30 +83,30 @@ export class EmailService {
       .map(
         (b) =>
           `<tr>
-            <td style="padding:8px;border-bottom:1px solid #eee">${b.name}</td>
-            <td style="padding:8px;border-bottom:1px solid #eee">${b.location || '-'}</td>
-            <td style="padding:8px;border-bottom:1px solid #eee">${b.availableSqm ? b.availableSqm + ' mp' : '-'}</td>
-            <td style="padding:8px;border-bottom:1px solid #eee">${b.serviceCharge ? b.serviceCharge + ' EUR/mp' : '-'}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #eee">${b.name}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #eee">${b.location || '-'}</td>
+            <td style="padding:8px 12px;border-bottom:1px solid #eee">${b.availableSqm ? b.availableSqm + ' mp' : '-'}</td>
           </tr>`,
       )
       .join('');
 
     const html = `
-      <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <div style="font-family:sans-serif;max-width:600px">
         <h2 style="color:#1e293b">Oferta: ${dealName}</h2>
         ${companyName ? '<p style="color:#64748b">Pentru: ' + companyName + '</p>' : ''}
         ${message ? '<p style="color:#334155">' + message + '</p>' : ''}
+        <p style="color:#334155">Proprietatile incluse in aceasta oferta:</p>
         <table style="width:100%;border-collapse:collapse;margin-top:16px">
           <thead>
             <tr style="background:#f8fafc">
-              <th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">Proprietate</th>
-              <th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">Locatie</th>
-              <th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">Suprafata</th>
-              <th style="padding:8px;text-align:left;border-bottom:2px solid #e2e8f0">Pret</th>
+              <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e2e8f0">Proprietate</th>
+              <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e2e8f0">Locatie</th>
+              <th style="padding:8px 12px;text-align:left;border-bottom:2px solid #e2e8f0">Suprafata</th>
             </tr>
           </thead>
           <tbody>${buildingRows}</tbody>
         </table>
+        <p style="color:#334155;font-size:14px;margin-top:20px">Pentru detalii complete si preturi, va rugam sa consultati documentul PDF atasat.</p>
         <p style="color:#94a3b8;font-size:12px;margin-top:24px">Trimis prin MapEstate</p>
       </div>
     `;
