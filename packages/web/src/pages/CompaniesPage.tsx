@@ -35,6 +35,8 @@ export default function CompaniesPage() {
     jNumber: '',
     address: '',
   });
+  const [cuiInput, setCuiInput] = useState('');
+  const [autoFilled, setAutoFilled] = useState(false);
 
   const fetchCompanies = useCallback(async (p: number) => {
     setLoading(true);
@@ -84,6 +86,8 @@ export default function CompaniesPage() {
       await companiesService.create(formData);
       setShowForm(false);
       setFormData({ name: '', vatNumber: '', jNumber: '', address: '' });
+      setCuiInput('');
+      setAutoFilled(false);
       fetchCompanies(page);
     } catch (err: unknown) {
       const message =
@@ -96,12 +100,13 @@ export default function CompaniesPage() {
   };
 
   const handleLookupCui = async () => {
-    const cui = formData.vatNumber.replace(/\D/g, '');
+    const cui = cuiInput.replace(/\D/g, '');
     if (!cui) {
       setFormError('Introdu un CUI valid pentru cautare.');
       return;
     }
     setFormError('');
+    setAutoFilled(false);
     setLookingUpCui(true);
     try {
       const res = await companiesService.lookupCui(cui);
@@ -110,13 +115,14 @@ export default function CompaniesPage() {
         setFormError('Nu s-a gasit nicio firma cu acest CUI.');
         return;
       }
-      setFormData((prev) => ({
-        ...prev,
-        name: data.name ?? prev.name,
-        address: data.address ?? prev.address,
-        jNumber: data.jNumber ?? prev.jNumber,
-        vatNumber: data.vatNumber ?? prev.vatNumber,
-      }));
+      setFormData({
+        name: data.name ?? '',
+        address: data.address ?? '',
+        jNumber: data.jNumber ?? '',
+        vatNumber: data.vatNumber ?? '',
+      });
+      setAutoFilled(true);
+      setTimeout(() => setAutoFilled(false), 2000);
     } catch {
       setFormError('Eroare la interogarea ANAF. Incearca din nou.');
     } finally {
@@ -281,73 +287,94 @@ export default function CompaniesPage() {
             </div>
           )}
 
-          <div>
-            <label className="label">Nume *</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, name: e.target.value.toUpperCase() }))
-              }
-              className="input uppercase"
-              placeholder="NUMELE COMPANIEI"
-              autoFocus
-            />
+          {/* CUI lookup — prominent, first */}
+          <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
+            <label className="label !text-blue-900 !font-semibold">
+              Cod Unic de Identificare (CUI)
+            </label>
+            <p className="text-xs text-blue-600 mb-2">
+              Completeaza automat datele firmei din ANAF
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={cuiInput}
+                onChange={(e) => setCuiInput(e.target.value.replace(/\s/g, ''))}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleLookupCui(); }}
+                className="input flex-1 !bg-white text-lg font-mono tracking-wider"
+                placeholder="ex: 12345678"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={handleLookupCui}
+                disabled={lookingUpCui}
+                className="btn-primary shrink-0 !px-5"
+              >
+                {lookingUpCui ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Search className="w-4 h-4" />
+                )}
+                <span>{lookingUpCui ? 'Se cauta...' : 'Cauta'}</span>
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Auto-filled fields */}
+          <div className={`space-y-4 transition-all duration-500 ${autoFilled ? 'ring-2 ring-green-300 rounded-lg p-3 bg-green-50/50' : ''}`}>
             <div>
-              <label className="label">CUI</label>
-              <div className="flex gap-2">
+              <label className="label">Nume *</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, name: e.target.value.toUpperCase() }))
+                }
+                className="input uppercase"
+                placeholder="NUMELE COMPANIEI"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="label">CUI / Cod fiscal</label>
                 <input
                   type="text"
                   value={formData.vatNumber}
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, vatNumber: e.target.value.toUpperCase() }))
                   }
-                  className="input flex-1 uppercase"
+                  className="input uppercase"
                   placeholder="RO12345678"
                 />
-                <button
-                  type="button"
-                  onClick={handleLookupCui}
-                  disabled={lookingUpCui}
-                  className="btn-secondary !px-3 shrink-0"
-                  title="Cauta firma dupa CUI in baza de date ANAF"
-                >
-                  {lookingUpCui ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Search className="w-4 h-4" />
-                  )}
-                </button>
+              </div>
+              <div>
+                <label className="label">Nr. Registru</label>
+                <input
+                  type="text"
+                  value={formData.jNumber}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, jNumber: e.target.value }))
+                  }
+                  className="input"
+                  placeholder="J40/123/2024"
+                />
               </div>
             </div>
+
             <div>
-              <label className="label">Nr. Registru</label>
+              <label className="label">Adresa</label>
               <input
                 type="text"
-                value={formData.jNumber}
+                value={formData.address}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, jNumber: e.target.value }))
+                  setFormData((prev) => ({ ...prev, address: e.target.value }))
                 }
                 className="input"
-                placeholder="J40/123/2024"
+                placeholder="Adresa sediului social"
               />
             </div>
-          </div>
-
-          <div>
-            <label className="label">Adresa</label>
-            <input
-              type="text"
-              value={formData.address}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, address: e.target.value }))
-              }
-              className="input"
-              placeholder="Adresa sediului social"
-            />
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">
