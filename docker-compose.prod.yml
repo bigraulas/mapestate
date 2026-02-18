@@ -64,6 +64,25 @@ services:
       - "${APP_PORT:-80}:80"
     networks:
       - mapestate
+      - coolify
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.mapestate-https.rule=Host(`mapestate.eu`) || Host(`www.mapestate.eu`)
+      - traefik.http.routers.mapestate-https.entrypoints=https
+      - traefik.http.routers.mapestate-https.tls=true
+      - traefik.http.routers.mapestate-https.tls.certresolver=letsencrypt
+      - traefik.http.routers.mapestate-http.rule=Host(`mapestate.eu`) || Host(`www.mapestate.eu`)
+      - traefik.http.routers.mapestate-http.entrypoints=http
+      - traefik.http.routers.mapestate-http.middlewares=mapestate-redirect
+      - traefik.http.middlewares.mapestate-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.mapestate-redirect.redirectscheme.permanent=true
+      - traefik.http.services.mapestate.loadbalancer.server.port=80
 
   # Run migrations on first deploy (or manually: docker compose -f docker-compose.prod.yml run migrate)
   migrate:
@@ -90,3 +109,5 @@ volumes:
 networks:
   mapestate:
     driver: bridge
+  coolify:
+    external: true
