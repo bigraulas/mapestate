@@ -136,7 +136,7 @@ export default function MapboxMap({
 
       // Toggle label visibility on zoom for mobile
       if (mobile) {
-        const LABEL_ZOOM_THRESHOLD = 6;
+        const LABEL_ZOOM_THRESHOLD = 6.5;
         const updateZoomClass = () => {
           if (m.getZoom() >= LABEL_ZOOM_THRESHOLD) {
             container.classList.add('map-zoomed-in');
