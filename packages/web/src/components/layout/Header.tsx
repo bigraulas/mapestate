@@ -17,7 +17,7 @@ const routeLabels: Record<string, string> = {
   '/persoane': 'Persoane',
   '/cereri': 'Cereri',
   '/oferte': 'Oferte',
-  '/deals': 'Deals',
+  '/deals': 'Ofertare',
   '/activitati': 'Activitati',
   '/utilizatori': 'Utilizatori',
 };

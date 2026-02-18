@@ -248,7 +248,7 @@ export default function DealsPage() {
             ? 'bg-amber-100 text-amber-700'
             : 'bg-blue-100 text-blue-700'
         }`}>
-          {r.dealType === 'COLD_SALES' ? 'Ofertare\nin Masa' : 'Cerere\nNoua'}
+          {r.dealType === 'COLD_SALES' ? 'Ofertare\nManuala' : 'Cerere\nNoua'}
         </span>
       ),
     },
@@ -331,9 +331,9 @@ export default function DealsPage() {
         <div className="flex items-center gap-3">
           <FileText className="w-6 h-6 text-primary-600" />
           <div>
-            <h1 className="page-title">Deals</h1>
+            <h1 className="page-title">Ofertare</h1>
             <p className="page-subtitle">
-              Gestioneaza deal-urile de inchiriere si vanzare
+              Gestioneaza ofertele de inchiriere si vanzare
             </p>
           </div>
         </div>
@@ -359,7 +359,7 @@ export default function DealsPage() {
             onClick={() => setColdSalesOpen(true)}
           >
             <Zap className="w-4 h-4" />
-            <span>Ofertare in Masa</span>
+            <span>Ofertare Manuala</span>
           </button>
         </div>
       </div>
@@ -464,7 +464,7 @@ export default function DealsPage() {
                               </p>
                               {req.dealType === 'COLD_SALES' && (
                                 <span className="text-[10px] font-medium bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded shrink-0">
-                                  Masa
+                                  Manual
                                 </span>
                               )}
                             </div>

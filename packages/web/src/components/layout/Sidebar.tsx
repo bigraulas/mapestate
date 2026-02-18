@@ -40,7 +40,7 @@ const navigation: NavItem[] = [
       { label: 'Persoane', path: '/persoane', icon: Users },
     ],
   },
-  { label: 'Deals', path: '/deals', icon: Handshake },
+  { label: 'Ofertare', path: '/deals', icon: Handshake },
   { label: 'Activitati', path: '/activitati', icon: Calendar },
   {
     label: 'Admin',
