@@ -67,4 +67,10 @@ export const dealsService = {
 
   reassign: (id: number, userId: number) =>
     api.patch(`/requests/${id}/reassign`, { userId }),
+
+  closeDeal: (id: number, data: Record<string, unknown>) =>
+    api.post(`/requests/${id}/close`, data),
+
+  updateOfferFeedback: (offerId: number, feedback: string, feedbackNotes?: string) =>
+    api.patch(`/offers/${offerId}/feedback`, { feedback, feedbackNotes }),
 };

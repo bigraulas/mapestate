@@ -117,6 +117,7 @@ export default function DealDetailPage() {
   // Activities
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activitiesLoaded, setActivitiesLoaded] = useState(false);
+  const [showSystemEvents, setShowSystemEvents] = useState(true);
 
   // UI state
   const [showDetails, setShowDetails] = useState(false);
@@ -127,6 +128,7 @@ export default function DealDetailPage() {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<string>('');
   const [lostReason, setLostReason] = useState('');
+  const [holdReason, setHoldReason] = useState('');
   const [statusSubmitting, setStatusSubmitting] = useState(false);
   const [statusError, setStatusError] = useState('');
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
@@ -143,6 +145,21 @@ export default function DealDetailPage() {
   const [preSendAction, setPreSendAction] = useState<'email' | 'pdf' | 'preview' | 'whatsapp'>('email');
   const [buildingOverrides, setBuildingOverrides] = useState<BuildingOverride[]>([]);
   const [offerMessage, setOfferMessage] = useState('');
+
+  // Closure (WON) modal
+  const [closureOpen, setClosureOpen] = useState(false);
+  const [closureSubmitting, setClosureSubmitting] = useState(false);
+  const [closureError, setClosureError] = useState('');
+  const [closureForm, setClosureForm] = useState({
+    agreedPrice: '',
+    actualFee: '',
+    signedDate: '',
+    contractStartDate: '',
+    contractEndDate: '',
+    wonBuildingId: '' as string,
+    wonUnitIds: '' as string,
+    closureNotes: '',
+  });
 
   // Edit deal
   const [editOpen, setEditOpen] = useState(false);
@@ -457,6 +474,39 @@ export default function DealDetailPage() {
     }
   };
 
+  const handleClosureSubmit = async () => {
+    if (!deal) return;
+    if (!closureForm.agreedPrice || !closureForm.actualFee || !closureForm.signedDate || !closureForm.contractStartDate || !closureForm.wonBuildingId) {
+      setClosureError('Completeaza campurile obligatorii.');
+      return;
+    }
+    setClosureSubmitting(true);
+    setClosureError('');
+    try {
+      const unitIdsArr = closureForm.wonUnitIds
+        ? closureForm.wonUnitIds.split(',').map((s) => parseInt(s.trim())).filter((n) => !isNaN(n))
+        : [];
+      await dealsService.closeDeal(deal.id, {
+        agreedPrice: Number(closureForm.agreedPrice),
+        actualFee: Number(closureForm.actualFee),
+        signedDate: closureForm.signedDate,
+        contractStartDate: closureForm.contractStartDate,
+        contractEndDate: closureForm.contractEndDate || undefined,
+        wonBuildingId: Number(closureForm.wonBuildingId),
+        wonUnitIds: unitIdsArr,
+        closureNotes: closureForm.closureNotes || undefined,
+      });
+      setClosureOpen(false);
+      toast.success('Deal marcat ca CASTIGAT!');
+      fetchDeal();
+    } catch (err: unknown) {
+      const message = (err as any)?.response?.data?.message || 'Eroare la finalizare.';
+      setClosureError(Array.isArray(message) ? message.join(', ') : message);
+    } finally {
+      setClosureSubmitting(false);
+    }
+  };
+
   const handleStatusSubmit = async () => {
     if (!deal) return;
     if (newStatus === RequestStatus.LOST && !lostReason.trim()) {
@@ -469,7 +519,8 @@ export default function DealDetailPage() {
       await dealsService.updateStatus(deal.id, {
         status: newStatus,
         lostReason: newStatus === RequestStatus.LOST ? lostReason : undefined,
-      });
+        holdReason: newStatus === RequestStatus.ON_HOLD ? holdReason : undefined,
+      } as any);
       setStatusDialogOpen(false);
       toast.success('Status actualizat!');
       fetchDeal();
@@ -587,9 +638,16 @@ export default function DealDetailPage() {
                     <button
                       key={s}
                       onClick={() => {
+                        if (s === RequestStatus.WON) {
+                          setStatusDropdownOpen(false);
+                          setClosureError('');
+                          setClosureOpen(true);
+                          return;
+                        }
                         setStatusDropdownOpen(false);
                         setNewStatus(s);
                         setLostReason('');
+                        setHoldReason('');
                         setStatusError('');
                         setStatusDialogOpen(true);
                       }}
@@ -839,6 +897,22 @@ export default function DealDetailPage() {
                         {new Date(offer.sentAt).toLocaleDateString('ro-RO')}
                       </span>
                     )}
+                    <select
+                      className="text-[10px] px-1.5 py-0.5 rounded border border-slate-200 bg-white text-slate-600 ml-2"
+                      value={(offer as any).feedback || 'SENT'}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={async (e) => {
+                        try {
+                          await dealsService.updateOfferFeedback(offer.id, e.target.value);
+                          fetchDeal();
+                        } catch {}
+                      }}
+                    >
+                      <option value="SENT">Trimisa</option>
+                      <option value="VIEWED">Vizualizata</option>
+                      <option value="INTERESTED">Interesat</option>
+                      <option value="REJECTED">Respinsa</option>
+                    </select>
                   </div>
                 ))}
               </div>
@@ -886,6 +960,43 @@ export default function DealDetailPage() {
                   <p className="text-sm text-slate-600">{deal.notes}</p>
                 </div>
               )}
+              {deal.status === 'LOST' && deal.lostReason && (
+                <div className="mt-3 pt-3 border-t border-red-100">
+                  <p className="text-[10px] font-medium text-red-400 uppercase tracking-wider mb-1">Motiv pierdere</p>
+                  <p className="text-sm text-red-600">{deal.lostReason}</p>
+                </div>
+              )}
+              {deal.status === 'ON_HOLD' && (deal as any).holdReason && (
+                <div className="mt-3 pt-3 border-t border-amber-100">
+                  <p className="text-[10px] font-medium text-amber-400 uppercase tracking-wider mb-1">Motiv suspendare</p>
+                  <p className="text-sm text-amber-600">{(deal as any).holdReason}</p>
+                </div>
+              )}
+              {deal.status === 'WON' && (deal as any).agreedPrice && (
+                <div className="mt-3 pt-3 border-t border-emerald-100">
+                  <p className="text-[10px] font-medium text-emerald-500 uppercase tracking-wider mb-2">Date finalizare</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { label: 'Pret agreat', value: `${(deal as any).agreedPrice?.toLocaleString('ro-RO')} €` },
+                      { label: 'Comision', value: `${(deal as any).actualFee?.toLocaleString('ro-RO')} €` },
+                      { label: 'Data semnare', value: (deal as any).signedDate ? new Date((deal as any).signedDate).toLocaleDateString('ro-RO') : null },
+                      { label: 'Start contract', value: (deal as any).contractStartDate ? new Date((deal as any).contractStartDate).toLocaleDateString('ro-RO') : null },
+                      { label: 'Sfarsit contract', value: (deal as any).contractEndDate ? new Date((deal as any).contractEndDate).toLocaleDateString('ro-RO') : null },
+                    ].filter(f => f.value).map((f) => (
+                      <div key={f.label}>
+                        <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{f.label}</p>
+                        <p className="text-sm text-slate-800 mt-0.5">{f.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {(deal as any).closureNotes && (
+                    <div className="mt-2">
+                      <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Notite</p>
+                      <p className="text-sm text-slate-600 mt-0.5">{(deal as any).closureNotes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -904,6 +1015,18 @@ export default function DealDetailPage() {
                   {activities.length}
                 </span>
               )}
+              {activitiesLoaded && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowSystemEvents(!showSystemEvents); }}
+                  className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                    showSystemEvents
+                      ? 'bg-blue-50 text-blue-600 border-blue-200'
+                      : 'bg-slate-100 text-slate-400 border-slate-200'
+                  }`}
+                >
+                  Sistem
+                </button>
+              )}
             </span>
             {showActivities ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
           </button>
@@ -915,32 +1038,49 @@ export default function DealDetailPage() {
                 </div>
               ) : activities.length === 0 ? (
                 <p className="text-xs text-slate-400 text-center py-4">Nicio activitate.</p>
-              ) : (
-                <div className="space-y-2">
-                  {activities.map((act) => (
-                    <div key={act.id} className="flex items-start gap-2.5 p-2.5 bg-slate-50 rounded-lg">
-                      <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${act.done ? 'bg-emerald-100' : 'bg-slate-200'}`}>
-                        {act.done
-                          ? <Check className="w-3.5 h-3.5 text-emerald-600" />
-                          : <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        }
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-slate-700 font-medium truncate">{act.title}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">
-                          {ACTIVITY_TYPE_LABELS[act.activityType as ActivityType] ?? act.activityType}
-                          {' · '}
-                          {new Date(act.date).toLocaleDateString('ro-RO')}
-                          {act.time ? ` ${act.time}` : ''}
-                        </p>
-                        {act.notes && (
-                          <p className="text-xs text-slate-500 mt-1 line-clamp-2">{act.notes}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              ) : (() => {
+                const filteredActivities = showSystemEvents
+                  ? activities
+                  : activities.filter((a) => !(a as any).isSystem);
+                return (
+                  <div className="space-y-2">
+                    {filteredActivities.map((act) => {
+                      const isSystemAct = (act as any).isSystem;
+                      return (
+                        <div key={act.id} className={`flex items-start gap-2.5 p-2.5 rounded-lg ${isSystemAct ? 'bg-blue-50/50' : 'bg-slate-50'}`}>
+                          <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${
+                            isSystemAct ? 'bg-blue-100' : act.done ? 'bg-emerald-100' : 'bg-slate-200'
+                          }`}>
+                            {isSystemAct
+                              ? <RefreshCw className="w-3.5 h-3.5 text-blue-500" />
+                              : act.done
+                                ? <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                : <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            }
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm text-slate-700 font-medium truncate">{act.title}</p>
+                              {isSystemAct && (
+                                <span className="text-[9px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded font-medium shrink-0">auto</span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-0.5">
+                              {ACTIVITY_TYPE_LABELS[act.activityType as ActivityType] ?? act.activityType}
+                              {' · '}
+                              {new Date(act.date).toLocaleDateString('ro-RO')}
+                              {act.time ? ` ${act.time}` : ''}
+                            </p>
+                            {act.notes && (
+                              <p className="text-xs text-slate-500 mt-1 line-clamp-2">{act.notes}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
@@ -1152,6 +1292,20 @@ export default function DealDetailPage() {
                 rows={3}
                 placeholder="Descrie motivul..."
                 required
+              />
+            </div>
+          )}
+
+          {newStatus === RequestStatus.ON_HOLD && (
+            <div>
+              <label htmlFor="hold-reason" className="label">Motivul suspendarii</label>
+              <textarea
+                id="hold-reason"
+                value={holdReason}
+                onChange={(e) => setHoldReason(e.target.value)}
+                className="input"
+                rows={2}
+                placeholder="De ce se pune on hold..."
               />
             </div>
           )}
@@ -1377,6 +1531,114 @@ export default function DealDetailPage() {
                 <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
               <span>{editSubmitting ? 'Se salveaza...' : 'Salveaza'}</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── CLOSURE (WON) MODAL ── */}
+      <Modal
+        isOpen={closureOpen}
+        onClose={() => setClosureOpen(false)}
+        title="Finalizeaza deal-ul (WON)"
+      >
+        <div className="space-y-4">
+          {closureError && (
+            <div className="rounded-lg bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">
+              {closureError}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Pret agreat (EUR) *</label>
+              <input
+                type="number"
+                value={closureForm.agreedPrice}
+                onChange={(e) => setClosureForm((f) => ({ ...f, agreedPrice: e.target.value }))}
+                className="input"
+                min={0}
+              />
+            </div>
+            <div>
+              <label className="label">Comision real (EUR) *</label>
+              <input
+                type="number"
+                value={closureForm.actualFee}
+                onChange={(e) => setClosureForm((f) => ({ ...f, actualFee: e.target.value }))}
+                className="input"
+                min={0}
+              />
+            </div>
+            <div>
+              <label className="label">Data semnare *</label>
+              <input
+                type="date"
+                value={closureForm.signedDate}
+                onChange={(e) => setClosureForm((f) => ({ ...f, signedDate: e.target.value }))}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="label">Data start contract *</label>
+              <input
+                type="date"
+                value={closureForm.contractStartDate}
+                onChange={(e) => setClosureForm((f) => ({ ...f, contractStartDate: e.target.value }))}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="label">Data sfarsit contract</label>
+              <input
+                type="date"
+                value={closureForm.contractEndDate}
+                onChange={(e) => setClosureForm((f) => ({ ...f, contractEndDate: e.target.value }))}
+                className="input"
+              />
+            </div>
+            <div>
+              <label className="label">Building ID castigat *</label>
+              <input
+                type="number"
+                value={closureForm.wonBuildingId}
+                onChange={(e) => setClosureForm((f) => ({ ...f, wonBuildingId: e.target.value }))}
+                className="input"
+                placeholder="ID-ul building-ului"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Unit IDs (separate prin virgula)</label>
+            <input
+              type="text"
+              value={closureForm.wonUnitIds}
+              onChange={(e) => setClosureForm((f) => ({ ...f, wonUnitIds: e.target.value }))}
+              className="input"
+              placeholder="ex: 1, 2, 3"
+            />
+          </div>
+
+          <div>
+            <label className="label">Notite finalizare</label>
+            <textarea
+              value={closureForm.closureNotes}
+              onChange={(e) => setClosureForm((f) => ({ ...f, closureNotes: e.target.value }))}
+              className="input"
+              rows={2}
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button onClick={() => setClosureOpen(false)} className="btn-secondary">
+              Anuleaza
+            </button>
+            <button onClick={handleClosureSubmit} disabled={closureSubmitting} className="btn-primary !bg-emerald-600 hover:!bg-emerald-700">
+              {closureSubmitting && (
+                <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              )}
+              <span>{closureSubmitting ? 'Se finalizeaza...' : 'Marcheaza CASTIGAT'}</span>
             </button>
           </div>
         </div>

@@ -5,6 +5,7 @@ import {
   TrendingUp,
   Square,
   CheckCircle,
+  DollarSign,
   Loader2,
   Users,
 } from 'lucide-react';
@@ -28,6 +29,12 @@ interface KpiData {
   totalEstimatedFee: number;
   totalSqm: number;
   closedDealsCount: number;
+}
+
+interface RevenueKpiData {
+  totalAgreedPrice: number;
+  totalActualFee: number;
+  wonDealsCount: number;
 }
 
 interface PipelineItem {
@@ -129,6 +136,7 @@ export default function DashboardPage() {
   const [pipeline, setPipeline] = useState<PipelineItem[]>([]);
   const [monthlySales, setMonthlySales] = useState<MonthlySalesItem[]>([]);
   const [expiringLeases, setExpiringLeases] = useState<ExpiringLease[]>([]);
+  const [revenueKpis, setRevenueKpis] = useState<RevenueKpiData | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Admin-specific
@@ -165,17 +173,19 @@ export default function DashboardPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [kpiRes, pipelineRes, salesRes, leasesRes] = await Promise.all([
+        const [kpiRes, pipelineRes, salesRes, leasesRes, revenueRes] = await Promise.all([
           dashboardService.getKpis(selectedBrokerId),
           dashboardService.getPipeline(selectedBrokerId),
           dashboardService.getMonthlySales(selectedBrokerId),
           dashboardService.getExpiringLeases(selectedBrokerId),
+          dashboardService.getRevenueKpis(selectedBrokerId),
         ]);
 
         setKpis(kpiRes.data);
         setPipeline(pipelineRes.data);
         setMonthlySales(salesRes.data);
         setExpiringLeases(leasesRes.data);
+        setRevenueKpis(revenueRes.data);
       } catch (err) {
         console.error('Failed to load dashboard data', err);
       } finally {
@@ -287,6 +297,53 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Revenue KPIs - only show if there are WON deals */}
+      {(revenueKpis?.wonDealsCount ?? 0) > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 sm:p-5">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-50">
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-slate-500">Fee Real (WON)</p>
+                <p className="text-lg sm:text-2xl font-semibold text-emerald-600">
+                  {formatCurrency(revenueKpis?.totalActualFee ?? 0)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 sm:p-5">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-50">
+                <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-slate-500">Pret Agreat Total</p>
+                <p className="text-lg sm:text-2xl font-semibold text-emerald-600">
+                  {formatCurrency(revenueKpis?.totalAgreedPrice ?? 0)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 sm:p-5 col-span-2 lg:col-span-1">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-50">
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm text-slate-500">Dealuri Castigate</p>
+                <p className="text-lg sm:text-2xl font-semibold text-emerald-600">
+                  {revenueKpis?.wonDealsCount ?? 0}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Broker Performance Table - admin only */}
       {isAdmin && !selectedBrokerId && brokerPerformance.length > 0 && (

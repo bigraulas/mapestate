@@ -9,6 +9,8 @@ export const dashboardService = {
     api.get('/dashboard/pipeline', { params: brokerId ? { brokerId } : {} }),
   getExpiringLeases: (brokerId?: number) =>
     api.get('/dashboard/expiring-leases', { params: brokerId ? { brokerId } : {} }),
+  getRevenueKpis: (brokerId?: number) =>
+    api.get('/dashboard/revenue-kpis', { params: brokerId ? { brokerId } : {} }),
   getBrokerPerformance: () =>
     api.get('/dashboard/broker-performance'),
 };

@@ -303,7 +303,7 @@ export default function BuildingDetailPage() {
                               )}
                               {unit.warehousePrice != null && (
                                 <span className="text-xs text-slate-400">
-                                  Hala: {unit.warehousePrice} EUR/mp
+                                  Spatiu: {unit.warehousePrice} EUR/mp
                                 </span>
                               )}
                               {unit.hasOffice && (
@@ -355,7 +355,7 @@ export default function BuildingDetailPage() {
                           )}
                           {unit.warehousePrice != null && (
                             <div>
-                              <span className="text-slate-400">Pret hala:</span>{' '}
+                              <span className="text-slate-400">Pret spatiu:</span>{' '}
                               <span className="text-slate-700">{unit.warehousePrice} EUR/mp/luna</span>
                             </div>
                           )}

@@ -40,6 +40,29 @@ export class DashboardService {
     };
   }
 
+  async getRevenueKpis(userId: number | null, agencyId?: number | null) {
+    const userFilter: Record<string, unknown> = userId != null ? { userId } : {};
+    if (agencyId && userId == null) {
+      userFilter.user = { agencyId };
+    }
+    const wonWhere = {
+      ...userFilter,
+      status: RequestStatus.WON,
+    };
+
+    const aggregates = await this.prisma.propertyRequest.aggregate({
+      where: wonWhere,
+      _sum: { agreedPrice: true, actualFee: true },
+      _count: true,
+    });
+
+    return {
+      totalAgreedPrice: aggregates._sum.agreedPrice ?? 0,
+      totalActualFee: aggregates._sum.actualFee ?? 0,
+      wonDealsCount: aggregates._count,
+    };
+  }
+
   async getMonthlySales(userId: number | null, agencyId?: number | null) {
     const year = new Date().getFullYear();
     const startOfYear = new Date(year, 0, 1);

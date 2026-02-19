@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Shield,
   Globe,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -46,6 +47,7 @@ const navigation: NavItem[] = [
     adminOnly: true,
     children: [
       { label: 'Echipa', path: '/utilizatori', icon: Users },
+      { label: 'Reasignare', path: '/reasignare', icon: ArrowRightLeft },
       { label: 'Jurnal Activitate', path: '/jurnal', icon: ClipboardList },
       { label: 'Setari Agentie', path: '/setari', icon: Settings },
     ],

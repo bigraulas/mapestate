@@ -96,6 +96,16 @@ export class OffersController {
     res.end(pdfBuffer);
   }
 
+  @Patch(':id/feedback')
+  @UseGuards(AuthGuard('jwt'))
+  updateFeedback(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('feedback') feedback: string,
+    @Body('feedbackNotes') feedbackNotes?: string,
+  ) {
+    return this.offersService.updateFeedback(id, feedback, feedbackNotes);
+  }
+
   @Get('by-request/:requestId')
   @UseGuards(AuthGuard('jwt'))
   findByRequest(@Param('requestId', ParseIntPipe) requestId: number) {

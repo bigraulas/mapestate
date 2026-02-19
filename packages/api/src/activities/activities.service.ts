@@ -190,6 +190,29 @@ export class ActivitiesService {
     return { message: 'Activity deleted successfully' };
   }
 
+  async logSystem(params: {
+    title: string;
+    activityType: 'NOTE' | 'EMAIL';
+    requestId?: number;
+    companyId?: number;
+    userId: number;
+    notes?: string;
+  }) {
+    return this.prisma.activity.create({
+      data: {
+        title: params.title,
+        date: new Date(),
+        activityType: params.activityType,
+        isSystem: true,
+        done: true,
+        userId: params.userId,
+        requestId: params.requestId,
+        companyId: params.companyId,
+        notes: params.notes,
+      },
+    });
+  }
+
   async filter(
     filters: Record<string, unknown>,
     page: number = 1,

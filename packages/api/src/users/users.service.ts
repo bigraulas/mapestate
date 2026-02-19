@@ -101,4 +101,49 @@ export class UsersService {
       where: { id },
     });
   }
+
+  async portfolioCount(userId: number, agencyId: number) {
+    const agencyFilter = { userId, user: { agencyId } };
+
+    const [persons, companies, requests, offers] = await Promise.all([
+      this.prisma.person.count({ where: agencyFilter }),
+      this.prisma.company.count({ where: agencyFilter }),
+      this.prisma.propertyRequest.count({ where: agencyFilter }),
+      this.prisma.offer.count({ where: agencyFilter }),
+    ]);
+
+    return { persons, companies, requests, offers };
+  }
+
+  async bulkReassignPortfolio(
+    fromUserId: number,
+    toUserId: number,
+    agencyId: number,
+  ) {
+    // Verify both users belong to the same agency
+    const [fromUser, toUser] = await Promise.all([
+      this.prisma.user.findFirst({ where: { id: fromUserId, agencyId } }),
+      this.prisma.user.findFirst({ where: { id: toUserId, agencyId } }),
+    ]);
+
+    if (!fromUser || !toUser) {
+      throw new NotFoundException('Unul dintre utilizatori nu a fost gasit in aceasta agentie');
+    }
+
+    const where = { userId: fromUserId, user: { agencyId } };
+
+    const [persons, companies, requests, offers] = await this.prisma.$transaction([
+      this.prisma.person.updateMany({ where, data: { userId: toUserId } }),
+      this.prisma.company.updateMany({ where, data: { userId: toUserId } }),
+      this.prisma.propertyRequest.updateMany({ where, data: { userId: toUserId } }),
+      this.prisma.offer.updateMany({ where, data: { userId: toUserId } }),
+    ]);
+
+    return {
+      persons: persons.count,
+      companies: companies.count,
+      requests: requests.count,
+      offers: offers.count,
+    };
+  }
 }

@@ -12,4 +12,10 @@ export const usersService = {
     api.patch(`/users/${id}`, data),
 
   delete: (id: number) => api.delete(`/users/${id}`),
+
+  portfolioCount: (userId: number) =>
+    api.get(`/users/${userId}/portfolio-count`),
+
+  bulkReassignPortfolio: (fromUserId: number, toUserId: number) =>
+    api.post('/users/bulk-reassign-portfolio', { fromUserId, toUserId }),
 };

@@ -8,4 +8,8 @@ export class UpdateStatusDto {
   @IsString()
   @IsOptional()
   lostReason?: string;
+
+  @IsString()
+  @IsOptional()
+  holdReason?: string;
 }

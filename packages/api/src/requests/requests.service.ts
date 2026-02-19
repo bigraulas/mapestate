@@ -6,6 +6,7 @@ import {
 import { RequestStatus } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { ActivitiesService } from '../activities/activities.service';
 import { CreateRequestDto } from './dto/create-request.dto';
 import { UpdateRequestDto } from './dto/update-request.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
@@ -15,6 +16,18 @@ const TERMINAL_STATUSES: RequestStatus[] = [
   RequestStatus.WON,
   RequestStatus.LOST,
 ];
+
+const VALID_TRANSITIONS: Record<RequestStatus, RequestStatus[]> = {
+  [RequestStatus.NEW]: [RequestStatus.OFFERING, RequestStatus.LOST, RequestStatus.ON_HOLD],
+  [RequestStatus.OFFERING]: [RequestStatus.TOUR, RequestStatus.SHORTLIST, RequestStatus.NEGOTIATION, RequestStatus.LOST, RequestStatus.ON_HOLD],
+  [RequestStatus.TOUR]: [RequestStatus.SHORTLIST, RequestStatus.NEGOTIATION, RequestStatus.LOST, RequestStatus.ON_HOLD],
+  [RequestStatus.SHORTLIST]: [RequestStatus.NEGOTIATION, RequestStatus.TOUR, RequestStatus.LOST, RequestStatus.ON_HOLD],
+  [RequestStatus.NEGOTIATION]: [RequestStatus.HOT_SIGNED, RequestStatus.WON, RequestStatus.LOST, RequestStatus.ON_HOLD],
+  [RequestStatus.HOT_SIGNED]: [RequestStatus.WON, RequestStatus.LOST, RequestStatus.ON_HOLD, RequestStatus.NEGOTIATION],
+  [RequestStatus.ON_HOLD]: [RequestStatus.NEW, RequestStatus.OFFERING, RequestStatus.TOUR, RequestStatus.SHORTLIST, RequestStatus.NEGOTIATION, RequestStatus.HOT_SIGNED, RequestStatus.LOST],
+  [RequestStatus.WON]: [],
+  [RequestStatus.LOST]: [],
+};
 
 /**
  * Calculate great-circle distance between two points using the Haversine formula.
@@ -44,6 +57,7 @@ export class RequestsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly activitiesService: ActivitiesService,
   ) {}
 
   async findAll(page: number = 1, limit: number = 20) {
@@ -242,6 +256,14 @@ export class RequestsService {
       type: dto.requestType,
     });
 
+    await this.activitiesService.logSystem({
+      title: 'Deal creat',
+      activityType: 'NOTE',
+      requestId: request.id,
+      companyId: request.companyId ?? undefined,
+      userId,
+    });
+
     return request;
   }
 
@@ -424,6 +446,13 @@ export class RequestsService {
       );
     }
 
+    const allowedNext = VALID_TRANSITIONS[existing.status] || [];
+    if (!allowedNext.includes(dto.status)) {
+      throw new BadRequestException(
+        `Nu poti trece de la ${existing.status} la ${dto.status}`,
+      );
+    }
+
     if (dto.status === RequestStatus.LOST && !dto.lostReason) {
       throw new BadRequestException(
         'lostReason is required when setting status to LOST',
@@ -438,6 +467,7 @@ export class RequestsService {
         status: dto.status,
         lostReason:
           dto.status === RequestStatus.LOST ? dto.lostReason : undefined,
+        holdReason: dto.status === RequestStatus.ON_HOLD ? dto.holdReason : undefined,
         closedAt: isClosing ? new Date() : undefined,
         lastStatusChange: new Date(),
       },
@@ -455,6 +485,18 @@ export class RequestsService {
         from: existing.status,
         to: dto.status,
         name: request.name,
+      });
+
+      const statusLabel = dto.status === 'LOST'
+        ? `Status: ${existing.status} → ${dto.status} (${dto.lostReason})`
+        : `Status: ${existing.status} → ${dto.status}`;
+      await this.activitiesService.logSystem({
+        title: statusLabel,
+        activityType: 'NOTE',
+        requestId: id,
+        companyId: request.companyId ?? undefined,
+        userId: userId || request.userId,
+        notes: dto.status === 'LOST' ? dto.lostReason : undefined,
       });
     }
 
@@ -708,6 +750,84 @@ export class RequestsService {
     await this.auditService.log('REASSIGN', 'DEAL', id, adminUserId, {
       fromUserId: oldUserId,
       toUserId: newUserId,
+    });
+
+    await this.activitiesService.logSystem({
+      title: `Reasignat de la agentul #${oldUserId} la agentul #${newUserId}`,
+      activityType: 'NOTE',
+      requestId: id,
+      companyId: updated.companyId ?? undefined,
+      userId: adminUserId,
+    });
+
+    return updated;
+  }
+
+  async closeDeal(id: number, data: {
+    agreedPrice: number;
+    actualFee: number;
+    signedDate: string;
+    contractStartDate: string;
+    contractEndDate?: string;
+    wonBuildingId: number;
+    wonUnitIds: number[];
+    closureNotes?: string;
+  }, userId: number) {
+    const request = await this.findOne(id);
+
+    if (request.status !== RequestStatus.NEGOTIATION
+        && request.status !== RequestStatus.HOT_SIGNED) {
+      throw new BadRequestException(
+        'Deal-ul trebuie sa fie in NEGOCIERE sau HOT SIGNED pentru a fi finalizat',
+      );
+    }
+
+    const updated = await this.prisma.propertyRequest.update({
+      where: { id },
+      data: {
+        status: RequestStatus.WON,
+        closedAt: new Date(),
+        lastStatusChange: new Date(),
+        agreedPrice: data.agreedPrice,
+        actualFee: data.actualFee,
+        signedDate: new Date(data.signedDate),
+        contractStartDate: new Date(data.contractStartDate),
+        contractEndDate: data.contractEndDate ? new Date(data.contractEndDate) : undefined,
+        wonBuildingId: data.wonBuildingId,
+        wonUnitIds: data.wonUnitIds,
+        closureNotes: data.closureNotes,
+      },
+      include: { company: true, person: true, locations: true },
+    });
+
+    if (updated.companyId && data.contractEndDate && data.wonUnitIds.length > 0) {
+      for (const unitId of data.wonUnitIds) {
+        await this.prisma.tenant.create({
+          data: {
+            unitId,
+            companyId: updated.companyId,
+            dealId: id,
+            startDate: new Date(data.contractStartDate),
+            endDate: new Date(data.contractEndDate),
+          },
+        });
+      }
+    }
+
+    await this.recalculateDealCounts(updated.companyId, updated.personId);
+
+    await this.auditService.log('CLOSE_WON', 'DEAL', id, userId, {
+      agreedPrice: data.agreedPrice,
+      actualFee: data.actualFee,
+      wonBuildingId: data.wonBuildingId,
+    });
+
+    await this.activitiesService.logSystem({
+      title: `Deal castigat! Pret: ${data.agreedPrice}€, Comision: ${data.actualFee}€`,
+      activityType: 'NOTE',
+      requestId: id,
+      companyId: updated.companyId ?? undefined,
+      userId,
     });
 
     return updated;

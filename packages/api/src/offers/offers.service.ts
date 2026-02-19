@@ -7,6 +7,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { PdfGeneratorService } from './pdf-generator.service';
 import { AuditService } from '../audit/audit.service';
+import { ActivitiesService } from '../activities/activities.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
@@ -22,6 +23,7 @@ export class OffersService {
     private readonly emailService: EmailService,
     private readonly pdfGenerator: PdfGeneratorService,
     private readonly auditService: AuditService,
+    private readonly activitiesService: ActivitiesService,
   ) {}
 
   async findAll(page: number = 1, limit: number = 20, userId: number | null = null, agencyId?: number | null) {
@@ -289,6 +291,15 @@ export class OffersService {
       emailStatus: emailResult.status,
     });
 
+    await this.activitiesService.logSystem({
+      title: `Oferta trimisa: ${buildings.map((b) => b.name).join(', ')}`,
+      activityType: 'EMAIL',
+      requestId: deal.id,
+      companyId: deal.companyId ?? undefined,
+      userId,
+      notes: `${buildings.length} proprietati, email: ${recipientEmails.join(', ')}`,
+    });
+
     return {
       sent: createdOffers.length,
       emailStatus: emailResult.status,
@@ -424,6 +435,27 @@ export class OffersService {
       buildings,
       agency,
     );
+  }
+
+  async updateFeedback(offerId: number, feedback: string, feedbackNotes?: string) {
+    const offer = await this.findOne(offerId);
+
+    const updated = await this.prisma.offer.update({
+      where: { id: offerId },
+      data: { feedback: feedback as any, feedbackNotes },
+    });
+
+    if (feedback === 'INTERESTED') {
+      await this.activitiesService.logSystem({
+        title: `Client interesat de oferta ${offer.offerCode}`,
+        activityType: 'NOTE',
+        requestId: offer.requestId,
+        companyId: offer.companyId ?? undefined,
+        userId: offer.userId,
+      });
+    }
+
+    return updated;
   }
 
   // ── Shared PDF (public link) ─────────────────────────────────────────

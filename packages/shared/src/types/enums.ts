@@ -116,3 +116,17 @@ export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   [ActivityType.NOTE]: 'Notă',
   [ActivityType.TASK]: 'Sarcină',
 };
+
+export enum OfferFeedback {
+  SENT = 'SENT',
+  VIEWED = 'VIEWED',
+  INTERESTED = 'INTERESTED',
+  REJECTED = 'REJECTED',
+}
+
+export const OFFER_FEEDBACK_LABELS: Record<OfferFeedback, string> = {
+  [OfferFeedback.SENT]: 'Trimisa',
+  [OfferFeedback.VIEWED]: 'Vizualizata',
+  [OfferFeedback.INTERESTED]: 'Interesat',
+  [OfferFeedback.REJECTED]: 'Respinsa',
+};

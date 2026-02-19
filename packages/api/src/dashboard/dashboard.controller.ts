@@ -16,6 +16,12 @@ export class DashboardController {
     return this.dashboardService.getKpis(effectiveUserId, req.user.agencyId);
   }
 
+  @Get('revenue-kpis')
+  getRevenueKpis(@Req() req: any, @Query('brokerId') brokerId?: string) {
+    const effectiveUserId = this.resolveUserId(req.user, brokerId);
+    return this.dashboardService.getRevenueKpis(effectiveUserId, req.user.agencyId);
+  }
+
   @Get('monthly-sales')
   getMonthlySales(@Req() req: any, @Query('brokerId') brokerId?: string) {
     const effectiveUserId = this.resolveUserId(req.user, brokerId);

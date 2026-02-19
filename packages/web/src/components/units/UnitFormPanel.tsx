@@ -16,7 +16,6 @@ interface UnitForm {
   usefulHeight: string;
   hasOffice: boolean;
   officeSqm: string;
-  hasSanitary: boolean;
   warehousePrice: string;
   officePrice: string;
   maintenancePrice: string;
@@ -51,8 +50,7 @@ function unitToForm(u?: Unit | null): UnitForm {
       usefulHeight: '',
       hasOffice: false,
       officeSqm: '',
-      hasSanitary: false,
-      warehousePrice: '',
+          warehousePrice: '',
       officePrice: '',
       maintenancePrice: '',
       docks: '',
@@ -82,7 +80,6 @@ function unitToForm(u?: Unit | null): UnitForm {
     usefulHeight: u.usefulHeight?.toString() ?? '',
     hasOffice: u.hasOffice ?? false,
     officeSqm: u.officeSqm?.toString() ?? '',
-    hasSanitary: u.hasSanitary ?? false,
     warehousePrice: u.warehousePrice?.toString() ?? '',
     officePrice: u.officePrice?.toString() ?? '',
     maintenancePrice: u.maintenancePrice?.toString() ?? '',
@@ -132,7 +129,6 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
     usefulHeight: form.usefulHeight ? parseFloat(form.usefulHeight) : undefined,
     hasOffice: form.hasOffice,
     officeSqm: form.officeSqm ? parseFloat(form.officeSqm) : undefined,
-    hasSanitary: form.hasSanitary,
     warehousePrice: form.warehousePrice ? parseFloat(form.warehousePrice) : undefined,
     officePrice: form.officePrice ? parseFloat(form.officePrice) : undefined,
     maintenancePrice: form.maintenancePrice ? parseFloat(form.maintenancePrice) : undefined,
@@ -162,7 +158,7 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.name) return;
+    if (!form.name || !form.warehousePrice) return;
 
     setError('');
     setSubmitting(true);
@@ -287,15 +283,6 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
                 <span className="text-xs text-slate-400">mp</span>
               </div>
             )}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.hasSanitary}
-                onChange={(e) => update('hasSanitary', e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-              />
-              <span className="text-sm text-slate-700">Grup sanitar</span>
-            </label>
           </div>
 
           {/* Rent Prices */}
@@ -305,7 +292,7 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
             </p>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="label">Hala</label>
+                <label className="label">Spatiu *</label>
                 <input
                   type="number"
                   value={form.warehousePrice}
@@ -314,6 +301,7 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
                   placeholder="0.00"
                   min="0"
                   step="0.01"
+                  required
                 />
               </div>
               <div>
@@ -621,7 +609,7 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
           <div className="pt-2">
             <button
               type="submit"
-              disabled={submitting || !form.name}
+              disabled={submitting || !form.name || !form.warehousePrice}
               className="btn-primary w-full justify-center"
             >
               {submitting ? (

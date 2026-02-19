@@ -78,6 +78,13 @@ enum EmailStatus {
   FAILED
 }
 
+enum OfferFeedback {
+  SENT
+  VIEWED
+  INTERESTED
+  REJECTED
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -308,6 +315,15 @@ model PropertyRequest {
   status            RequestStatus  @default(NEW)
   dealType          DealType       @default(REQUEST)
   lostReason        String?
+  holdReason        String?
+  agreedPrice       Float?
+  actualFee         Float?
+  contractStartDate DateTime?
+  contractEndDate   DateTime?
+  signedDate        DateTime?
+  wonBuildingId     Int?
+  wonUnitIds        Json?
+  closureNotes      String?         @db.Text
   notes             String?        @db.Text
   closedAt          DateTime?
   lastStatusChange  DateTime?
@@ -326,6 +342,7 @@ model PropertyRequest {
   locations  Location[]
   offers     Offer[]
   activities Activity[]
+  tenants    Tenant[]
 
   @@index([companyId])
   @@index([personId])
@@ -341,6 +358,8 @@ model Offer {
   sentAt              DateTime?
   emailStatus         EmailStatus   @default(PENDING)
   emailId             String?
+  feedback          OfferFeedback?
+  feedbackNotes     String?
   requestedSqm       Int?
   requestedType      String?
   requestedStartDate DateTime?
@@ -429,6 +448,7 @@ model Activity {
   time         String?
   duration     Int?
   done         Boolean      @default(false)
+  isSystem     Boolean      @default(false)
   notes        String?      @db.Text
   activityType ActivityType
   userId       Int
@@ -455,14 +475,17 @@ model Tenant {
   endDate   DateTime
   unitId    Int
   companyId Int
+  dealId    Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   unit    Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)
   company Company @relation(fields: [companyId], references: [id])
+  deal    PropertyRequest? @relation(fields: [dealId], references: [id], onDelete: SetNull)
 
   @@index([unitId])
   @@index([companyId])
+  @@index([dealId])
   @@map("tenants")
 }
 

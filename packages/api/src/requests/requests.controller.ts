@@ -121,6 +121,15 @@ export class RequestsController {
     return this.requestsService.updateStatus(id, dto, req.user.id);
   }
 
+  @Post(':id/close')
+  close(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: any,
+    @Req() req: any,
+  ) {
+    return this.requestsService.closeDeal(id, body, req.user.id);
+  }
+
   @Patch(':id/reassign')
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)

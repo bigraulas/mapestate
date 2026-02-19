@@ -16,6 +16,7 @@ import UsersPage from './pages/UsersPage';
 import AuditLogPage from './pages/AuditLogPage';
 import SettingsPage from './pages/SettingsPage';
 import PlatformPage from './pages/PlatformPage';
+import ReassignPage from './pages/ReassignPage';
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
         <Route path="deals/:id" element={<DealDetailPage />} />
         <Route path="utilizatori" element={<UsersPage />} />
         <Route path="jurnal" element={<AuditLogPage />} />
+        <Route path="reasignare" element={<ReassignPage />} />
         <Route path="setari" element={<SettingsPage />} />
         <Route path="platform" element={<PlatformPage />} />
       </Route>

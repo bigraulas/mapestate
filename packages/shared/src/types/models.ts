@@ -182,6 +182,15 @@ export interface PropertyRequest {
   status: RequestStatus;
   dealType: DealType;
   lostReason?: string | null;
+  holdReason?: string | null;
+  agreedPrice?: number | null;
+  actualFee?: number | null;
+  contractStartDate?: string | null;
+  contractEndDate?: string | null;
+  signedDate?: string | null;
+  wonBuildingId?: number | null;
+  wonUnitIds?: number[] | null;
+  closureNotes?: string | null;
   notes?: string | null;
   closedAt?: string | null;
   searchLat?: number | null;
@@ -195,6 +204,7 @@ export interface PropertyRequest {
   user?: User;
   locations?: Location[];
   offers?: Offer[];
+  tenants?: Tenant[];
   createdAt: string;
   updatedAt: string;
 }
@@ -206,6 +216,8 @@ export interface Offer {
   sentAt?: string | null;
   emailStatus?: EmailStatus;
   emailId?: string | null;
+  feedback?: string | null;
+  feedbackNotes?: string | null;
   requestedSqm?: number | null;
   requestedType?: string | null;
   requestedStartDate?: string | null;
@@ -277,6 +289,7 @@ export interface Activity {
   time?: string | null;
   duration?: number | null;
   done: boolean;
+  isSystem?: boolean;
   notes?: string | null;
   activityType: ActivityType;
   userId: number;
@@ -298,6 +311,8 @@ export interface Tenant {
   unit?: Unit;
   companyId: number;
   company?: Company;
+  dealId?: number | null;
+  deal?: PropertyRequest;
 }
 
 export interface Agency {

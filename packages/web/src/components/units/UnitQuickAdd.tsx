@@ -1,7 +1,7 @@
-import { useState, useRef, type FormEvent } from 'react';
-import { Save, Loader2, X, Settings } from 'lucide-react';
+import { useState, useRef, useCallback, type FormEvent } from 'react';
+import { Save, Loader2, X, Settings, FileImage, ImagePlus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { unitsService } from '@/services';
+import { unitsService, uploadsService } from '@/services';
 
 interface UnitQuickAddProps {
   buildingId: number;
@@ -22,7 +22,8 @@ interface QuickAddForm {
   crossDock: boolean;
   hasOffice: boolean;
   officeSqm: string;
-  hasSanitary: boolean;
+  floorPlan: string[];
+  photos: string[];
 }
 
 const emptyForm: QuickAddForm = {
@@ -38,7 +39,8 @@ const emptyForm: QuickAddForm = {
   crossDock: false,
   hasOffice: false,
   officeSqm: '',
-  hasSanitary: false,
+  floorPlan: [],
+  photos: [],
 };
 
 function parseNum(val: string): number | undefined {
@@ -56,7 +58,10 @@ function parseInt10(val: string): number | undefined {
 export default function UnitQuickAdd({ buildingId, onSaved, onCancel }: UnitQuickAddProps) {
   const [form, setForm] = useState<QuickAddForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingField, setUploadingField] = useState<'floorPlan' | 'photos' | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  const floorPlanRef = useRef<HTMLInputElement>(null);
+  const photosRef = useRef<HTMLInputElement>(null);
 
   const update = <K extends keyof QuickAddForm>(key: K, val: QuickAddForm[K]) =>
     setForm((prev) => ({ ...prev, [key]: val }));
@@ -75,11 +80,37 @@ export default function UnitQuickAdd({ buildingId, onSaved, onCancel }: UnitQuic
     crossDock: form.crossDock,
     hasOffice: form.hasOffice,
     officeSqm: parseNum(form.officeSqm),
-    hasSanitary: form.hasSanitary,
+    floorPlan: form.floorPlan[0] || undefined,
+    photos: form.photos.length > 0 ? form.photos : undefined,
   });
 
+  const handleUpload = useCallback(async (files: FileList, field: 'floorPlan' | 'photos') => {
+    const fileArr = Array.from(files);
+    if (fileArr.length === 0) return;
+    setUploadingField(field);
+    try {
+      const urls: string[] = [];
+      for (const file of fileArr) {
+        const res = await uploadsService.upload(file);
+        urls.push(res.data.url);
+      }
+      setForm((prev) => ({
+        ...prev,
+        [field]: field === 'photos' ? [...prev.photos, ...urls] : urls.slice(0, 1),
+      }));
+    } catch {
+      toast.error('Eroare la upload');
+    } finally {
+      setUploadingField(null);
+    }
+  }, []);
+
+  const removeFile = (field: 'floorPlan' | 'photos', url: string) => {
+    setForm((prev) => ({ ...prev, [field]: prev[field].filter((u) => u !== url) }));
+  };
+
   const save = async (openDetails: boolean) => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || !form.warehousePrice) return;
     setSubmitting(true);
     try {
       await unitsService.create(buildPayload());
@@ -153,9 +184,10 @@ export default function UnitQuickAdd({ buildingId, onSaved, onCancel }: UnitQuic
             value={form.warehousePrice}
             onChange={(e) => update('warehousePrice', e.target.value)}
             className="input"
-            placeholder="Hala"
+            placeholder="Spatiu *"
             min="0"
             step="0.01"
+            required
           />
           <input
             type="number"
@@ -258,22 +290,89 @@ export default function UnitQuickAdd({ buildingId, onSaved, onCancel }: UnitQuic
             />
           </div>
         )}
-        <label className="flex items-center gap-1.5 pb-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.hasSanitary}
-            onChange={(e) => update('hasSanitary', e.target.checked)}
-            className={checkboxClass}
-          />
-          <span className="text-xs text-slate-600">Sanitar</span>
-        </label>
+      </div>
+
+      {/* Row 5: Uploads - subtle inline */}
+      <div className="flex items-center gap-3 mb-4">
+        {/* Floor plan */}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => floorPlanRef.current?.click()}
+            disabled={uploadingField === 'floorPlan'}
+            className="flex items-center gap-1 px-2 py-1 rounded border border-dashed border-slate-300 text-slate-400 hover:border-primary-400 hover:text-primary-500 transition-colors text-[11px]"
+          >
+            {uploadingField === 'floorPlan' ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <FileImage className="w-3 h-3" />
+            )}
+            Schita
+          </button>
+          {form.floorPlan.map((url) => (
+            <div key={url} className="relative group w-7 h-7 rounded border border-slate-200 overflow-hidden bg-slate-50">
+              <img src={url} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removeFile('floorPlan', url)}
+                className="absolute inset-0 bg-red-500/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+        {/* Photos */}
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => photosRef.current?.click()}
+            disabled={uploadingField === 'photos'}
+            className="flex items-center gap-1 px-2 py-1 rounded border border-dashed border-slate-300 text-slate-400 hover:border-primary-400 hover:text-primary-500 transition-colors text-[11px]"
+          >
+            {uploadingField === 'photos' ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <ImagePlus className="w-3 h-3" />
+            )}
+            Poze
+          </button>
+          {form.photos.map((url) => (
+            <div key={url} className="relative group w-7 h-7 rounded border border-slate-200 overflow-hidden bg-slate-50">
+              <img src={url} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removeFile('photos', url)}
+                className="absolute inset-0 bg-red-500/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+        {/* Hidden file inputs */}
+        <input
+          ref={floorPlanRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          onChange={(e) => { if (e.target.files) handleUpload(e.target.files, 'floorPlan'); e.target.value = ''; }}
+          className="hidden"
+        />
+        <input
+          ref={photosRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          onChange={(e) => { if (e.target.files) handleUpload(e.target.files, 'photos'); e.target.value = ''; }}
+          className="hidden"
+        />
       </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2">
         <button
           type="submit"
-          disabled={submitting || !form.name.trim()}
+          disabled={submitting || !form.name.trim() || !form.warehousePrice}
           className="btn-primary !py-1.5 !px-3 !text-xs"
         >
           {submitting ? (
@@ -285,7 +384,7 @@ export default function UnitQuickAdd({ buildingId, onSaved, onCancel }: UnitQuic
         </button>
         <button
           type="button"
-          disabled={submitting || !form.name.trim()}
+          disabled={submitting || !form.name.trim() || !form.warehousePrice}
           onClick={() => save(true)}
           className="btn-secondary !py-1.5 !px-3 !text-xs"
         >
