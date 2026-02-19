@@ -8,9 +8,10 @@ import {
   Search,
   MapPin,
   Crosshair,
+  Plus,
 } from 'lucide-react';
 import type { Building, Company } from '@mapestate/shared';
-import { buildingsService, companiesService } from '@/services';
+import { buildingsService, companiesService, personsService } from '@/services';
 import { MapboxMap } from '@/components/map';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -56,7 +57,12 @@ interface FormData {
   ownerPhone: string;
   ownerEmail: string;
   propertyType: 'individual' | 'developer';
-  developerId: string;
+  developerId: string; // existing company id, or '__new__' for inline creation
+  // Inline new developer fields
+  newDevName: string;
+  newDevVatNumber: string;
+  newDevJNumber: string;
+  newDevAddress: string;
 }
 
 const INITIAL_FORM: FormData = {
@@ -69,6 +75,10 @@ const INITIAL_FORM: FormData = {
   ownerEmail: '',
   propertyType: 'individual',
   developerId: '',
+  newDevName: '',
+  newDevVatNumber: '',
+  newDevJNumber: '',
+  newDevAddress: '',
 };
 
 export default function BuildingFormPage() {
@@ -86,6 +96,11 @@ export default function BuildingFormPage() {
   // Developer companies
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
+
+  // CUI lookup for inline new developer
+  const [cuiInput, setCuiInput] = useState('');
+  const [lookingUpCui, setLookingUpCui] = useState(false);
+  const [cuiAutoFilled, setCuiAutoFilled] = useState(false);
 
   // Address autocomplete
   const [suggestions, setSuggestions] = useState<GeoFeature[]>([]);
@@ -159,6 +174,10 @@ export default function BuildingFormPage() {
           ownerEmail: b.ownerEmail ?? '',
           propertyType: b.developerId ? 'developer' : 'individual',
           developerId: b.developerId?.toString() ?? '',
+          newDevName: '',
+          newDevVatNumber: '',
+          newDevJNumber: '',
+          newDevAddress: '',
         });
       })
       .catch(() => setError('Nu s-a putut incarca proprietatea.'))
@@ -203,25 +222,88 @@ export default function BuildingFormPage() {
     }
   };
 
+  const handleLookupCui = async () => {
+    const cui = cuiInput.replace(/\D/g, '');
+    if (!cui) return;
+    setLookingUpCui(true);
+    setCuiAutoFilled(false);
+    try {
+      const res = await companiesService.lookupCui(cui);
+      const data = res.data;
+      if (data?.name) {
+        setForm((prev) => ({
+          ...prev,
+          newDevName: data.name ?? '',
+          newDevAddress: data.address ?? '',
+          newDevJNumber: data.jNumber ?? '',
+          newDevVatNumber: data.vatNumber ?? '',
+        }));
+        setCuiAutoFilled(true);
+        setTimeout(() => setCuiAutoFilled(false), 2000);
+      }
+    } catch { /* ignore */ }
+    setLookingUpCui(false);
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
 
-    const payload: Record<string, unknown> = {
-      name: form.name,
-      address: form.address || undefined,
-      latitude: form.latitude ? parseFloat(form.latitude) : undefined,
-      longitude: form.longitude ? parseFloat(form.longitude) : undefined,
-      ownerName: form.ownerName || undefined,
-      ownerPhone: form.ownerPhone || undefined,
-      ownerEmail: form.ownerEmail || undefined,
-      developerId: form.propertyType === 'developer' && form.developerId
-        ? parseInt(form.developerId, 10)
-        : null,
-    };
-
     try {
+      let developerId: number | null = null;
+
+      if (form.propertyType === 'developer') {
+        if (form.developerId === '__new__') {
+          // Create new developer company first
+          if (!form.newDevName.trim()) {
+            setError('Numele developerului este obligatoriu.');
+            setSubmitting(false);
+            return;
+          }
+          const companyRes = await companiesService.create({
+            name: form.newDevName,
+            vatNumber: form.newDevVatNumber || undefined,
+            jNumber: form.newDevJNumber || undefined,
+            address: form.newDevAddress || undefined,
+          });
+          developerId = companyRes.data.id;
+        } else if (form.developerId) {
+          developerId = parseInt(form.developerId, 10);
+        }
+      } else {
+        // Individual — create a company with the individual's name
+        if (form.ownerName.trim()) {
+          const companyRes = await companiesService.create({
+            name: form.ownerName,
+          });
+          developerId = companyRes.data.id;
+
+          // Create a person linked to this company
+          const phones = form.ownerPhone ? [form.ownerPhone] : [];
+          const emails = form.ownerEmail ? [form.ownerEmail] : [];
+          if (phones.length > 0 || emails.length > 0) {
+            await personsService.create({
+              name: form.ownerName,
+              companyId: developerId,
+              phones,
+              emails,
+            });
+          }
+        }
+      }
+
+      const payload: Record<string, unknown> = {
+        name: form.name,
+        address: form.address || undefined,
+        latitude: form.latitude ? parseFloat(form.latitude) : undefined,
+        longitude: form.longitude ? parseFloat(form.longitude) : undefined,
+        ownerName: form.ownerName || undefined,
+        ownerPhone: form.ownerPhone || undefined,
+        ownerEmail: form.ownerEmail || undefined,
+        developerId,
+      };
+
       let buildingId: number;
       if (isEditing) {
         const res = await buildingsService.update(parseInt(id, 10), payload);
@@ -387,25 +469,107 @@ export default function BuildingFormPage() {
             </label>
           </div>
           {form.propertyType === 'developer' && (
-            <div>
-              <label className="label">Developer (companie)</label>
-              {loadingCompanies ? (
-                <div className="flex items-center gap-2 text-sm text-slate-400 py-2">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Se incarca...
+            <div className="space-y-4">
+              <div>
+                <label className="label">Developer (companie)</label>
+                {loadingCompanies ? (
+                  <div className="flex items-center gap-2 text-sm text-slate-400 py-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Se incarca...
+                  </div>
+                ) : (
+                  <select
+                    value={form.developerId}
+                    onChange={(e) => updateField('developerId', e.target.value)}
+                    className="input"
+                  >
+                    <option value="">Selecteaza developer...</option>
+                    {companies.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                    <option value="__new__">+ Developer nou</option>
+                  </select>
+                )}
+              </div>
+
+              {/* Inline new developer form */}
+              {form.developerId === '__new__' && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4 space-y-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Plus className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-semibold text-blue-900">Developer nou</span>
+                  </div>
+
+                  {/* CUI lookup */}
+                  <div>
+                    <label className="label !text-blue-900">CUI (completare automata ANAF)</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={cuiInput}
+                        onChange={(e) => setCuiInput(e.target.value.replace(/\s/g, ''))}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleLookupCui(); } }}
+                        className="input flex-1 !bg-white font-mono"
+                        placeholder="ex: 12345678"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleLookupCui}
+                        disabled={lookingUpCui}
+                        className="btn-primary shrink-0 !px-4"
+                      >
+                        {lookingUpCui ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                        <span>{lookingUpCui ? 'Se cauta...' : 'Cauta'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={`space-y-3 transition-all duration-500 ${cuiAutoFilled ? 'ring-2 ring-green-300 rounded-lg p-3 bg-green-50/50' : ''}`}>
+                    <div>
+                      <label className="label">Nume developer *</label>
+                      <input
+                        type="text"
+                        value={form.newDevName}
+                        onChange={(e) => updateField('newDevName', e.target.value.toUpperCase())}
+                        className="input uppercase"
+                        placeholder="NUMELE COMPANIEI"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="label">CUI / Cod fiscal</label>
+                        <input
+                          type="text"
+                          value={form.newDevVatNumber}
+                          onChange={(e) => updateField('newDevVatNumber', e.target.value.toUpperCase())}
+                          className="input uppercase"
+                          placeholder="RO12345678"
+                        />
+                      </div>
+                      <div>
+                        <label className="label">Nr. Registru</label>
+                        <input
+                          type="text"
+                          value={form.newDevJNumber}
+                          onChange={(e) => updateField('newDevJNumber', e.target.value)}
+                          className="input"
+                          placeholder="J40/123/2024"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="label">Adresa sediu</label>
+                      <input
+                        type="text"
+                        value={form.newDevAddress}
+                        onChange={(e) => updateField('newDevAddress', e.target.value)}
+                        className="input"
+                        placeholder="Adresa sediului social"
+                      />
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <select
-                  value={form.developerId}
-                  onChange={(e) => updateField('developerId', e.target.value)}
-                  className="input"
-                >
-                  <option value="">Selecteaza developer...</option>
-                  {companies.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
               )}
             </div>
           )}
