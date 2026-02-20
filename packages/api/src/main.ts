@@ -9,6 +9,14 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
+  // Validate required env vars early
+  const required = ['JWT_SECRET', 'DATABASE_URL', 'MAPBOX_TOKEN'];
+  const missing = required.filter((k) => !process.env[k]);
+  if (missing.length > 0) {
+    logger.error(`Missing required env vars: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Security headers
@@ -24,6 +32,9 @@ async function bootstrap() {
 
   // CORS — restrict to FRONTEND_URL in production
   const frontendUrl = process.env.FRONTEND_URL;
+  if (!frontendUrl) {
+    logger.warn('FRONTEND_URL not set — CORS allows all origins (dev only)');
+  }
   app.enableCors({
     origin: frontendUrl || true,
     credentials: true,
