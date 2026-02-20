@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, Plus, Table2, Map, Loader2 } from 'lucide-react';
 import type { Building, PaginatedResponse } from '@mapestate/shared';
 import { TransactionType } from '@mapestate/shared';
+import toast from 'react-hot-toast';
 import { buildingsService } from '@/services';
 import DataTable, { type Column } from '@/components/shared/DataTable';
 import Pagination from '@/components/shared/Pagination';
@@ -131,6 +132,7 @@ export default function PropertiesPage() {
       setTotalPages(payload.meta.totalPages);
     } catch {
       setBuildings([]);
+      toast.error('Eroare la incarcarea proprietatilor.');
     } finally {
       setLoading(false);
     }
@@ -143,6 +145,7 @@ export default function PropertiesPage() {
       setMapBuildings(res.data);
     } catch {
       setMapBuildings([]);
+      toast.error('Eroare la incarcarea hartii.');
     } finally {
       setMapLoading(false);
     }

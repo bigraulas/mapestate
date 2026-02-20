@@ -200,9 +200,9 @@ export class RequestsService {
     return { closedRequests: count };
   }
 
-  async findOne(id: number) {
-    const request = await this.prisma.propertyRequest.findUnique({
-      where: { id },
+  async findOne(id: number, agencyId?: number) {
+    const request = await this.prisma.propertyRequest.findFirst({
+      where: { id, ...(agencyId ? { user: { agencyId } } : {}) },
       include: {
         company: true,
         person: true,
@@ -267,8 +267,8 @@ export class RequestsService {
     return request;
   }
 
-  async update(id: number, dto: UpdateRequestDto, userId?: number) {
-    const existing = await this.findOne(id);
+  async update(id: number, dto: UpdateRequestDto, userId?: number, agencyId?: number) {
+    const existing = await this.findOne(id, agencyId);
     const { locationIds, ...data } = dto;
 
     // Convert date-only string to proper DateTime for Prisma
@@ -317,8 +317,8 @@ export class RequestsService {
     return request;
   }
 
-  async remove(id: number, userId?: number) {
-    const request = await this.findOne(id);
+  async remove(id: number, userId?: number, agencyId?: number) {
+    const request = await this.findOne(id, agencyId);
 
     if (request.offers.length > 0) {
       throw new BadRequestException(
@@ -437,8 +437,8 @@ export class RequestsService {
     };
   }
 
-  async updateStatus(id: number, dto: UpdateStatusDto, userId?: number) {
-    const existing = await this.findOne(id);
+  async updateStatus(id: number, dto: UpdateStatusDto, userId?: number, agencyId?: number) {
+    const existing = await this.findOne(id, agencyId);
 
     if (TERMINAL_STATUSES.includes(existing.status)) {
       throw new BadRequestException(
@@ -730,8 +730,8 @@ export class RequestsService {
     return { deals: createdDeals, count: createdDeals.length };
   }
 
-  async reassign(id: number, newUserId: number, adminUserId: number) {
-    const request = await this.findOne(id);
+  async reassign(id: number, newUserId: number, adminUserId: number, agencyId?: number) {
+    const request = await this.findOne(id, agencyId);
     const oldUserId = request.userId;
 
     const updated = await this.prisma.propertyRequest.update({
@@ -772,8 +772,8 @@ export class RequestsService {
     wonBuildingId: number;
     wonUnitIds: number[];
     closureNotes?: string;
-  }, userId: number) {
-    const request = await this.findOne(id);
+  }, userId: number, agencyId?: number) {
+    const request = await this.findOne(id, agencyId);
 
     if (request.status !== RequestStatus.NEGOTIATION
         && request.status !== RequestStatus.HOT_SIGNED) {

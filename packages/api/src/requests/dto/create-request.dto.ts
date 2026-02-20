@@ -48,6 +48,10 @@ export class CreateRequestDto {
 
   @IsString()
   @IsOptional()
+  source?: string;
+
+  @IsString()
+  @IsOptional()
   notes?: string;
 
   @IsNumber()

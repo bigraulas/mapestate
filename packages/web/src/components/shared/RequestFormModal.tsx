@@ -2,6 +2,7 @@ import { useState, useEffect, lazy, Suspense, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, List, MapPin } from 'lucide-react';
 import Modal from '@/components/shared/Modal';
+import { DEAL_SOURCE_OPTIONS } from '@mapestate/shared';
 import { dealsService } from '@/services/deals.service';
 import { companiesService } from '@/services/companies.service';
 import { personsService } from '@/services/persons.service';
@@ -39,6 +40,7 @@ export default function RequestFormModal({
 }: RequestFormModalProps) {
   const navigate = useNavigate();
   const [requestType, setRequestType] = useState<'RENT' | 'SALE'>('RENT');
+  const [source, setSource] = useState('');
   const [numberOfSqm, setNumberOfSqm] = useState('');
   const [minHeight, setMinHeight] = useState('');
   const [companyId, setCompanyId] = useState('');
@@ -151,6 +153,7 @@ export default function RequestFormModal({
 
   const resetForm = () => {
     setRequestType('RENT');
+    setSource('');
     setNumberOfSqm('');
     setMinHeight('');
     setCompanyId('');
@@ -191,6 +194,7 @@ export default function RequestFormModal({
         personId: Number(personId),
       };
 
+      if (source) payload.source = source;
       if (numberOfSqm) payload.numberOfSqm = Number(numberOfSqm);
       if (minHeight) payload.minHeight = Number(minHeight);
       if (locationMode === 'list' && selectedLocationIds.length > 0) {
@@ -261,6 +265,22 @@ export default function RequestFormModal({
               Achizitie
             </button>
           </div>
+        </div>
+
+        {/* Source */}
+        <div>
+          <label htmlFor="req-source" className="label">Sursa</label>
+          <select
+            id="req-source"
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            className="input"
+          >
+            <option value="">-- Optional --</option>
+            {DEAL_SOURCE_OPTIONS.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
         </div>
 
         {/* Company */}

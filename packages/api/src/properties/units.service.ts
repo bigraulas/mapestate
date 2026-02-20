@@ -15,9 +15,9 @@ export class UnitsService {
     });
   }
 
-  async findOne(id: number) {
-    const unit = await this.prisma.unit.findUnique({
-      where: { id },
+  async findOne(id: number, agencyId?: number) {
+    const unit = await this.prisma.unit.findFirst({
+      where: { id, ...(agencyId ? { building: { user: { agencyId } } } : {}) },
       include: {
         building: {
           include: {
@@ -58,8 +58,8 @@ export class UnitsService {
     return unit;
   }
 
-  async update(id: number, dto: UpdateUnitDto) {
-    const existing = await this.findOne(id);
+  async update(id: number, dto: UpdateUnitDto, agencyId?: number) {
+    const existing = await this.findOne(id, agencyId);
 
     // Merge existing prices with dto to compute type correctly
     const merged = {
@@ -90,8 +90,8 @@ export class UnitsService {
     return unit;
   }
 
-  async remove(id: number) {
-    const unit = await this.findOne(id);
+  async remove(id: number, agencyId?: number) {
+    const unit = await this.findOne(id, agencyId);
     const buildingId = unit.buildingId;
 
     await this.prisma.unit.delete({

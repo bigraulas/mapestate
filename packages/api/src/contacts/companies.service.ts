@@ -36,9 +36,9 @@ export class CompaniesService {
     };
   }
 
-  async findOne(id: number) {
-    const company = await this.prisma.company.findUnique({
-      where: { id },
+  async findOne(id: number, agencyId?: number) {
+    const company = await this.prisma.company.findFirst({
+      where: { id, ...(agencyId ? { user: { agencyId } } : {}) },
       include: {
         persons: true,
         user: { select: { id: true, firstName: true, lastName: true } },
@@ -64,8 +64,8 @@ export class CompaniesService {
     });
   }
 
-  async update(id: number, dto: UpdateCompanyDto) {
-    await this.findOne(id);
+  async update(id: number, dto: UpdateCompanyDto, agencyId?: number) {
+    await this.findOne(id, agencyId);
 
     return this.prisma.company.update({
       where: { id },
@@ -76,8 +76,8 @@ export class CompaniesService {
     });
   }
 
-  async delete(id: number): Promise<void> {
-    await this.findOne(id);
+  async delete(id: number, agencyId?: number): Promise<void> {
+    await this.findOne(id, agencyId);
 
     await this.prisma.company.delete({
       where: { id },
@@ -149,8 +149,8 @@ export class CompaniesService {
     };
   }
 
-  async updateLogo(id: number, logo: string) {
-    await this.findOne(id);
+  async updateLogo(id: number, logo: string, agencyId?: number) {
+    await this.findOne(id, agencyId);
 
     return this.prisma.company.update({
       where: { id },
@@ -158,8 +158,8 @@ export class CompaniesService {
     });
   }
 
-  async reassign(id: number, newUserId: number) {
-    await this.findOne(id);
+  async reassign(id: number, newUserId: number, agencyId?: number) {
+    await this.findOne(id, agencyId);
     return this.prisma.company.update({
       where: { id },
       data: { userId: newUserId },

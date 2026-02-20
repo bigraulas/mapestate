@@ -32,6 +32,11 @@ async function bootstrap() {
 
   // CORS — restrict to FRONTEND_URL in production
   const frontendUrl = process.env.FRONTEND_URL;
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (!frontendUrl && isProduction) {
+    logger.error('FRONTEND_URL is required in production');
+    process.exit(1);
+  }
   if (!frontendUrl) {
     logger.warn('FRONTEND_URL not set — CORS allows all origins (dev only)');
   }

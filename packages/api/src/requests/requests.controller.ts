@@ -73,8 +73,8 @@ export class RequestsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.requestsService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.requestsService.findOne(id, req.user.agencyId);
   }
 
   @Post('cold-sales')
@@ -93,12 +93,12 @@ export class RequestsController {
     @Body() dto: UpdateRequestDto,
     @Req() req: any,
   ) {
-    return this.requestsService.update(id, dto, req.user.id);
+    return this.requestsService.update(id, dto, req.user.id, req.user.agencyId);
   }
 
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    return this.requestsService.remove(id, req.user.id);
+    return this.requestsService.remove(id, req.user.id, req.user.agencyId);
   }
 
   @Post('filter')
@@ -118,7 +118,7 @@ export class RequestsController {
     @Body() dto: UpdateStatusDto,
     @Req() req: any,
   ) {
-    return this.requestsService.updateStatus(id, dto, req.user.id);
+    return this.requestsService.updateStatus(id, dto, req.user.id, req.user.agencyId);
   }
 
   @Post(':id/close')
@@ -127,7 +127,7 @@ export class RequestsController {
     @Body() body: any,
     @Req() req: any,
   ) {
-    return this.requestsService.closeDeal(id, body, req.user.id);
+    return this.requestsService.closeDeal(id, body, req.user.id, req.user.agencyId);
   }
 
   @Patch(':id/reassign')
@@ -138,7 +138,7 @@ export class RequestsController {
     @Body('userId', ParseIntPipe) newUserId: number,
     @Req() req: any,
   ) {
-    return this.requestsService.reassign(id, newUserId, req.user.id);
+    return this.requestsService.reassign(id, newUserId, req.user.id, req.user.agencyId);
   }
 
   private resolveUserId(

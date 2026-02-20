@@ -117,6 +117,14 @@ export const ACTIVITY_TYPE_LABELS: Record<ActivityType, string> = {
   [ActivityType.TASK]: 'Sarcină',
 };
 
+export const DEAL_SOURCE_OPTIONS = [
+  'Client existent',
+  'Cold outreach',
+  'Referral',
+  'Website',
+  'Eveniment',
+] as const;
+
 export enum OfferFeedback {
   SENT = 'SENT',
   VIEWED = 'VIEWED',

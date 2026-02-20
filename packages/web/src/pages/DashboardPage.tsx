@@ -20,6 +20,7 @@ import {
   Legend,
   Cell,
 } from 'recharts';
+import toast from 'react-hot-toast';
 import { dashboardService } from '@/services/dashboard.service';
 import { usersService } from '@/services/users.service';
 import { useAuth } from '@/hooks/useAuth';
@@ -186,8 +187,8 @@ export default function DashboardPage() {
         setMonthlySales(salesRes.data);
         setExpiringLeases(leasesRes.data);
         setRevenueKpis(revenueRes.data);
-      } catch (err) {
-        console.error('Failed to load dashboard data', err);
+      } catch {
+        toast.error('Nu s-au putut incarca datele. Verificati conexiunea.');
       } finally {
         setLoading(false);
       }

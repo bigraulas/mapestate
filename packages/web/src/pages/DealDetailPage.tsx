@@ -947,6 +947,7 @@ export default function DealDetailPage() {
                   { label: 'Locatii', value: deal.locations?.length ? deal.locations.map((l) => l.name).join(', ') : null },
                   { label: 'Zona harta', value: (deal as any).searchRadius ? `Raza ${(deal as any).searchRadius} km` : null },
                   { label: 'Tip deal', value: DEAL_TYPE_LABELS[deal.dealType] ?? deal.dealType },
+                  { label: 'Sursa', value: deal.source ?? null },
                 ].filter(f => f.value).map((f) => (
                   <div key={f.label}>
                     <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{f.label}</p>

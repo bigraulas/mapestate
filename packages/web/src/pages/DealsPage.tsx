@@ -14,6 +14,7 @@ import {
   REQUEST_STATUS_LABELS,
   REQUEST_STATUS_COLORS,
 } from '@mapestate/shared';
+import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { dealsService } from '@/services/deals.service';
 import { usersService } from '@/services/users.service';
@@ -37,6 +38,7 @@ interface RequestRow {
   status: RequestStatus;
   requestType?: string | null;
   dealType?: string;
+  source?: string | null;
   company?: { id: number; name: string } | null;
   person?: { id: number; name: string } | null;
   user?: { id: number; firstName: string; lastName: string; email: string } | null;
@@ -132,6 +134,7 @@ export default function DealsPage() {
       setTotalPages(body.meta?.totalPages ?? 1);
     } catch {
       setRows([]);
+      toast.error('Eroare la incarcarea ofertelor.');
     } finally {
       setLoading(false);
     }
@@ -153,6 +156,7 @@ export default function DealsPage() {
       );
     } catch {
       setBoardColumns([]);
+      toast.error('Eroare la incarcarea board-ului.');
     } finally {
       setBoardLoading(false);
     }

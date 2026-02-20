@@ -116,9 +116,9 @@ export class BuildingsService {
     });
   }
 
-  async findOne(id: number) {
-    const building = await this.prisma.building.findUnique({
-      where: { id },
+  async findOne(id: number, agencyId?: number) {
+    const building = await this.prisma.building.findFirst({
+      where: { id, ...(agencyId ? { user: { agencyId } } : {}) },
       include: {
         units: true,
         location: true,
@@ -187,8 +187,8 @@ export class BuildingsService {
     return building;
   }
 
-  async update(id: number, dto: UpdateBuildingDto, userId?: number) {
-    await this.findOne(id);
+  async update(id: number, dto: UpdateBuildingDto, userId?: number, agencyId?: number) {
+    await this.findOne(id, agencyId);
 
     const { transactionType: _tt, propertyType: _pt, ...dtoRest } = dto as Record<string, unknown>;
     const data: Record<string, unknown> = { ...dtoRest };
@@ -234,8 +234,8 @@ export class BuildingsService {
     return result;
   }
 
-  async remove(id: number, userId?: number) {
-    const building = await this.findOne(id);
+  async remove(id: number, userId?: number, agencyId?: number) {
+    const building = await this.findOne(id, agencyId);
 
     await this.prisma.building.delete({
       where: { id },
@@ -346,8 +346,8 @@ export class BuildingsService {
     };
   }
 
-  async reassign(id: number, newUserId: number, adminUserId: number) {
-    const building = await this.findOne(id);
+  async reassign(id: number, newUserId: number, adminUserId: number, agencyId?: number) {
+    const building = await this.findOne(id, agencyId);
     const oldUserId = building.userId;
 
     // Update building and all its units

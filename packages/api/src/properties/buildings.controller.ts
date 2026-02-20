@@ -49,8 +49,8 @@ export class BuildingsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.buildingsService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.buildingsService.findOne(id, req.user.agencyId);
   }
 
   @Post()
@@ -67,12 +67,12 @@ export class BuildingsController {
     @Body() dto: UpdateBuildingDto,
     @Req() req: any,
   ) {
-    return this.buildingsService.update(id, dto, req.user.id);
+    return this.buildingsService.update(id, dto, req.user.id, req.user.agencyId);
   }
 
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    return this.buildingsService.remove(id, req.user.id);
+    return this.buildingsService.remove(id, req.user.id, req.user.agencyId);
   }
 
   @Post('filter')
@@ -88,6 +88,6 @@ export class BuildingsController {
     @Body('userId', ParseIntPipe) newUserId: number,
     @Req() req: any,
   ) {
-    return this.buildingsService.reassign(id, newUserId, req.user.id);
+    return this.buildingsService.reassign(id, newUserId, req.user.id, req.user.agencyId);
   }
 }

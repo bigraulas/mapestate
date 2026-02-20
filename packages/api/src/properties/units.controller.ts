@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   UseGuards,
   Request,
+  Req,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UnitsService } from './units.service';
@@ -27,8 +28,8 @@ export class UnitsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.unitsService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.unitsService.findOne(id, req.user.agencyId);
   }
 
   @Post()
@@ -43,12 +44,13 @@ export class UnitsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUnitDto,
+    @Req() req: any,
   ) {
-    return this.unitsService.update(id, dto);
+    return this.unitsService.update(id, dto, req.user.agencyId);
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.unitsService.remove(id);
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.unitsService.remove(id, req.user.agencyId);
   }
 }

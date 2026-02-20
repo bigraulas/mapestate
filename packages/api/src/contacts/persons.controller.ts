@@ -43,8 +43,8 @@ export class PersonsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.personsService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.personsService.findOne(id, req.user.agencyId);
   }
 
   @Post()
@@ -59,21 +59,23 @@ export class PersonsController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdatePersonDto,
+    @Req() req: any,
   ) {
-    return this.personsService.update(id, dto);
+    return this.personsService.update(id, dto, req.user.agencyId);
   }
 
   @Delete(':id')
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.personsService.delete(id);
+  delete(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.personsService.delete(id, req.user.agencyId);
   }
 
   @Post(':id/assign-company')
   assignCompany(
     @Param('id', ParseIntPipe) id: number,
     @Body('companyId', ParseIntPipe) companyId: number,
+    @Req() req: any,
   ) {
-    return this.personsService.assignCompany(id, companyId);
+    return this.personsService.assignCompany(id, companyId, req.user.agencyId);
   }
 
   @Patch(':id/reassign')
@@ -82,8 +84,9 @@ export class PersonsController {
   reassign(
     @Param('id', ParseIntPipe) id: number,
     @Body('userId', ParseIntPipe) newUserId: number,
+    @Req() req: any,
   ) {
-    return this.personsService.reassign(id, newUserId);
+    return this.personsService.reassign(id, newUserId, req.user.agencyId);
   }
 
   @Post('bulk-reassign')

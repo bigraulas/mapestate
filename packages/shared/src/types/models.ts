@@ -181,6 +181,7 @@ export interface PropertyRequest {
   requestType?: RequestType | null;
   status: RequestStatus;
   dealType: DealType;
+  source?: string | null;
   lostReason?: string | null;
   holdReason?: string | null;
   agreedPrice?: number | null;

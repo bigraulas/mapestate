@@ -62,9 +62,9 @@ export class OffersService {
     };
   }
 
-  async findOne(id: number) {
-    const offer = await this.prisma.offer.findUnique({
-      where: { id },
+  async findOne(id: number, agencyId?: number) {
+    const offer = await this.prisma.offer.findFirst({
+      where: { id, ...(agencyId ? { user: { agencyId } } : {}) },
       include: {
         request: true,
         company: true,
@@ -148,8 +148,8 @@ export class OffersService {
     return offer;
   }
 
-  async update(id: number, data: Record<string, unknown>) {
-    await this.findOne(id);
+  async update(id: number, data: Record<string, unknown>, agencyId?: number) {
+    await this.findOne(id, agencyId);
 
     return this.prisma.offer.update({
       where: { id },
@@ -162,8 +162,8 @@ export class OffersService {
     });
   }
 
-  async remove(id: number) {
-    await this.findOne(id);
+  async remove(id: number, agencyId?: number) {
+    await this.findOne(id, agencyId);
 
     // Cascade: offerGroups and groupItems deleted by DB cascade
     await this.prisma.offer.delete({ where: { id } });
@@ -171,8 +171,8 @@ export class OffersService {
     return { message: 'Offer deleted successfully' };
   }
 
-  async download(id: number) {
-    await this.findOne(id);
+  async download(id: number, agencyId?: number) {
+    await this.findOne(id, agencyId);
     return { message: 'PDF generation not implemented yet' };
   }
 
@@ -437,8 +437,8 @@ export class OffersService {
     );
   }
 
-  async updateFeedback(offerId: number, feedback: string, feedbackNotes?: string) {
-    const offer = await this.findOne(offerId);
+  async updateFeedback(offerId: number, feedback: string, feedbackNotes?: string, agencyId?: number) {
+    const offer = await this.findOne(offerId, agencyId);
 
     const updated = await this.prisma.offer.update({
       where: { id: offerId },

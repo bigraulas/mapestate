@@ -40,9 +40,9 @@ export class PersonsService {
     };
   }
 
-  async findOne(id: number) {
-    const person = await this.prisma.person.findUnique({
-      where: { id },
+  async findOne(id: number, agencyId?: number) {
+    const person = await this.prisma.person.findFirst({
+      where: { id, ...(agencyId ? { user: { agencyId } } : {}) },
       include: {
         company: true,
         label: true,
@@ -71,8 +71,8 @@ export class PersonsService {
     });
   }
 
-  async update(id: number, dto: UpdatePersonDto) {
-    await this.findOne(id);
+  async update(id: number, dto: UpdatePersonDto, agencyId?: number) {
+    await this.findOne(id, agencyId);
 
     return this.prisma.person.update({
       where: { id },
@@ -85,8 +85,8 @@ export class PersonsService {
     });
   }
 
-  async delete(id: number): Promise<void> {
-    await this.findOne(id);
+  async delete(id: number, agencyId?: number): Promise<void> {
+    await this.findOne(id, agencyId);
 
     await this.prisma.person.delete({
       where: { id },
@@ -122,8 +122,8 @@ export class PersonsService {
     return data;
   }
 
-  async assignCompany(personId: number, companyId: number) {
-    await this.findOne(personId);
+  async assignCompany(personId: number, companyId: number, agencyId?: number) {
+    await this.findOne(personId, agencyId);
 
     return this.prisma.person.update({
       where: { id: personId },
@@ -136,8 +136,8 @@ export class PersonsService {
     });
   }
 
-  async reassign(id: number, newUserId: number) {
-    await this.findOne(id);
+  async reassign(id: number, newUserId: number, agencyId?: number) {
+    await this.findOne(id, agencyId);
     return this.prisma.person.update({
       where: { id },
       data: { userId: newUserId },

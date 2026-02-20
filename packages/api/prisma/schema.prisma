@@ -314,6 +314,7 @@ model PropertyRequest {
   requestType       RequestType?
   status            RequestStatus  @default(NEW)
   dealType          DealType       @default(REQUEST)
+  source            String?
   lostReason        String?
   holdReason        String?
   agreedPrice       Float?

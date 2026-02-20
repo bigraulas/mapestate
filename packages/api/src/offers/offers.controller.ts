@@ -101,9 +101,10 @@ export class OffersController {
   updateFeedback(
     @Param('id', ParseIntPipe) id: number,
     @Body('feedback') feedback: string,
+    @Req() req: any,
     @Body('feedbackNotes') feedbackNotes?: string,
   ) {
-    return this.offersService.updateFeedback(id, feedback, feedbackNotes);
+    return this.offersService.updateFeedback(id, feedback, feedbackNotes, req.user.agencyId);
   }
 
   @Get('by-request/:requestId')
@@ -125,8 +126,8 @@ export class OffersController {
 
   @Get(':id')
   @UseGuards(AuthGuard('jwt'))
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.offersService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.offersService.findOne(id, req.user.agencyId);
   }
 
   @Post()
@@ -140,20 +141,21 @@ export class OffersController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() data: Record<string, unknown>,
+    @Req() req: any,
   ) {
-    return this.offersService.update(id, data);
+    return this.offersService.update(id, data, req.user.agencyId);
   }
 
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'))
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.offersService.remove(id);
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.offersService.remove(id, req.user.agencyId);
   }
 
   @Get(':id/download')
   @UseGuards(AuthGuard('jwt'))
-  download(@Param('id', ParseIntPipe) id: number) {
-    return this.offersService.download(id);
+  download(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.offersService.download(id, req.user.agencyId);
   }
 
   @Post(':offerId/groups')

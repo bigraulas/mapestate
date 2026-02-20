@@ -42,8 +42,8 @@ export class CompaniesController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.companiesService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.companiesService.findOne(id, req.user.agencyId);
   }
 
   @Post()
@@ -58,13 +58,14 @@ export class CompaniesController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateCompanyDto,
+    @Req() req: any,
   ) {
-    return this.companiesService.update(id, dto);
+    return this.companiesService.update(id, dto, req.user.agencyId);
   }
 
   @Delete(':id')
-  delete(@Param('id', ParseIntPipe) id: number) {
-    return this.companiesService.delete(id);
+  delete(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.companiesService.delete(id, req.user.agencyId);
   }
 
   @Post('filter')
@@ -82,8 +83,9 @@ export class CompaniesController {
   uploadLogo(
     @Param('id', ParseIntPipe) id: number,
     @Body('logo') logo: string,
+    @Req() req: any,
   ) {
-    return this.companiesService.updateLogo(id, logo);
+    return this.companiesService.updateLogo(id, logo, req.user.agencyId);
   }
 
   @Patch(':id/reassign')
@@ -92,8 +94,9 @@ export class CompaniesController {
   reassign(
     @Param('id', ParseIntPipe) id: number,
     @Body('userId', ParseIntPipe) newUserId: number,
+    @Req() req: any,
   ) {
-    return this.companiesService.reassign(id, newUserId);
+    return this.companiesService.reassign(id, newUserId, req.user.agencyId);
   }
 
   @Post('bulk-reassign')
