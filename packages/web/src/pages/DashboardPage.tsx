@@ -299,8 +299,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Revenue KPIs - only show if there are WON deals */}
-      {(revenueKpis?.wonDealsCount ?? 0) > 0 && (
+      {/* Revenue KPIs - show only when WON deals have actual fee data filled in */}
+      {(revenueKpis?.totalActualFee ?? 0) > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
           <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-3 sm:p-5">
             <div className="flex items-center gap-2 sm:gap-3">
