@@ -11,6 +11,7 @@ interface UnitQuickAddProps {
 
 interface QuickAddForm {
   name: string;
+  sqm: string;
   usefulHeight: string;
   warehousePrice: string;
   officePrice: string;
@@ -28,6 +29,7 @@ interface QuickAddForm {
 
 const emptyForm: QuickAddForm = {
   name: '',
+  sqm: '',
   usefulHeight: '',
   warehousePrice: '',
   officePrice: '',
@@ -69,6 +71,7 @@ export default function UnitQuickAdd({ buildingId, onSaved, onCancel }: UnitQuic
   const buildPayload = () => ({
     name: form.name,
     buildingId,
+    warehouseSpace: form.sqm ? { sqm: parseFloat(form.sqm), rentPrice: form.warehousePrice ? parseFloat(form.warehousePrice) : 0 } : undefined,
     usefulHeight: parseNum(form.usefulHeight),
     warehousePrice: parseNum(form.warehousePrice),
     officePrice: parseNum(form.officePrice),
@@ -110,7 +113,7 @@ export default function UnitQuickAdd({ buildingId, onSaved, onCancel }: UnitQuic
   };
 
   const save = async (openDetails: boolean) => {
-    if (!form.name.trim() || !form.warehousePrice) return;
+    if (!form.name.trim() || !form.sqm || !form.warehousePrice) return;
     setSubmitting(true);
     try {
       await unitsService.create(buildPayload());
@@ -146,7 +149,7 @@ export default function UnitQuickAdd({ buildingId, onSaved, onCancel }: UnitQuic
       onSubmit={handleSubmit}
       className="px-5 py-4 bg-primary-50/50 border-t border-primary-100"
     >
-      {/* Row 1: Name + Height */}
+      {/* Row 1: Name + Sqm + Height */}
       <div className="flex gap-3 mb-3">
         <div className="flex-1">
           <label className={labelClass}>Nume spatiu *</label>
@@ -159,6 +162,19 @@ export default function UnitQuickAdd({ buildingId, onSaved, onCancel }: UnitQuic
             placeholder="ex: Hala A1"
             required
             autoFocus
+          />
+        </div>
+        <div className="w-[100px]">
+          <label className={labelClass}>Suprafata (mp) *</label>
+          <input
+            type="number"
+            value={form.sqm}
+            onChange={(e) => update('sqm', e.target.value)}
+            className="input"
+            placeholder="0"
+            min="0"
+            step="1"
+            required
           />
         </div>
         <div className="w-[100px]">
@@ -372,7 +388,7 @@ export default function UnitQuickAdd({ buildingId, onSaved, onCancel }: UnitQuic
       <div className="flex items-center gap-2">
         <button
           type="submit"
-          disabled={submitting || !form.name.trim() || !form.warehousePrice}
+          disabled={submitting || !form.name.trim() || !form.sqm || !form.warehousePrice}
           className="btn-primary !py-1.5 !px-3 !text-xs"
         >
           {submitting ? (
@@ -384,7 +400,7 @@ export default function UnitQuickAdd({ buildingId, onSaved, onCancel }: UnitQuic
         </button>
         <button
           type="button"
-          disabled={submitting || !form.name.trim() || !form.warehousePrice}
+          disabled={submitting || !form.name.trim() || !form.sqm || !form.warehousePrice}
           onClick={() => save(true)}
           className="btn-secondary !py-1.5 !px-3 !text-xs"
         >

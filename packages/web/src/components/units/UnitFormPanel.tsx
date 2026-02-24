@@ -13,6 +13,7 @@ interface UnitFormPanelProps {
 
 interface UnitForm {
   name: string;
+  sqm: string;
   usefulHeight: string;
   hasOffice: boolean;
   officeSqm: string;
@@ -47,10 +48,11 @@ function unitToForm(u?: Unit | null): UnitForm {
   if (!u) {
     return {
       name: '',
+      sqm: '',
       usefulHeight: '',
       hasOffice: false,
       officeSqm: '',
-          warehousePrice: '',
+      warehousePrice: '',
       officePrice: '',
       maintenancePrice: '',
       docks: '',
@@ -77,6 +79,7 @@ function unitToForm(u?: Unit | null): UnitForm {
   }
   return {
     name: u.name,
+    sqm: (u.warehouseSpace as { sqm?: number } | null)?.sqm?.toString() ?? '',
     usefulHeight: u.usefulHeight?.toString() ?? '',
     hasOffice: u.hasOffice ?? false,
     officeSqm: u.officeSqm?.toString() ?? '',
@@ -126,6 +129,7 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
   const buildPayload = () => ({
     name: form.name,
     buildingId,
+    warehouseSpace: form.sqm ? { sqm: parseFloat(form.sqm), rentPrice: form.warehousePrice ? parseFloat(form.warehousePrice) : 0 } : undefined,
     usefulHeight: form.usefulHeight ? parseFloat(form.usefulHeight) : undefined,
     hasOffice: form.hasOffice,
     officeSqm: form.officeSqm ? parseFloat(form.officeSqm) : undefined,
@@ -158,7 +162,7 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.warehousePrice) return;
+    if (!form.name || !form.sqm || !form.warehousePrice) return;
 
     setError('');
     setSubmitting(true);
@@ -232,8 +236,8 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
             </div>
           )}
 
-          {/* Name + Height */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Name + Sqm + Height */}
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="label">Nume spatiu *</label>
               <input
@@ -242,6 +246,19 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
                 onChange={(e) => update('name', e.target.value)}
                 className="input"
                 placeholder="ex: Hala A1"
+                required
+              />
+            </div>
+            <div>
+              <label className="label">Suprafata (mp) *</label>
+              <input
+                type="number"
+                value={form.sqm}
+                onChange={(e) => update('sqm', e.target.value)}
+                className="input"
+                placeholder="0"
+                min="0"
+                step="1"
                 required
               />
             </div>
@@ -609,7 +626,7 @@ export default function UnitFormPanel({ buildingId, unit, onClose, onSaved }: Un
           <div className="pt-2">
             <button
               type="submit"
-              disabled={submitting || !form.name || !form.warehousePrice}
+              disabled={submitting || !form.name || !form.sqm || !form.warehousePrice}
               className="btn-primary w-full justify-center"
             >
               {submitting ? (

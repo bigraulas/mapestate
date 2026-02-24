@@ -298,6 +298,11 @@ export default function BuildingDetailPage() {
                                     ? 'Inchiriere & Vanzare'
                                     : 'Inchiriere'}
                               </span>
+                              {(unit.warehouseSpace as { sqm?: number } | null)?.sqm != null && (
+                                <span className="text-xs text-slate-400">
+                                  {(unit.warehouseSpace as { sqm: number }).sqm} mp
+                                </span>
+                              )}
                               {unit.usefulHeight != null && (
                                 <span className="text-xs text-slate-400">H: {unit.usefulHeight}m</span>
                               )}
@@ -341,6 +346,12 @@ export default function BuildingDetailPage() {
 
                       {isExpanded && (
                         <div className="pb-4 pl-11 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                          {(unit.warehouseSpace as { sqm?: number } | null)?.sqm != null && (
+                            <div>
+                              <span className="text-slate-400">Suprafata:</span>{' '}
+                              <span className="text-slate-700">{(unit.warehouseSpace as { sqm: number }).sqm} mp</span>
+                            </div>
+                          )}
                           {unit.usefulHeight != null && (
                             <div>
                               <span className="text-slate-400">Inaltime utila:</span>{' '}
